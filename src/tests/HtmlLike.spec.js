@@ -1,5 +1,9 @@
 
-import HtmlLikeUnexpected from '../';
+/* These are the integration tests for unexpected-htmllike
+ * They confirm that diff, contains and painter work together correctly
+ */
+
+import HtmlLikeUnexpected from '../index';
 import MagicPen from 'magicpen';
 import MagicPenPrism from 'magicpen-prism';
 import Unexpected from 'unexpected';
@@ -26,7 +30,7 @@ expect.addType({
         return htmlLikeUnexpected.inspect(value, depth, output, inspect);
     },
 
-    diff: (actual, expected, output, diff, inspect, equal) => {
+    diff: (actual, expected, output, diff, inspect) => {
         const htmlLikeUnexpected = new HtmlLikeUnexpected(TestAdapter, TestAdapter);
         return htmlLikeUnexpected.inspect(value, depth, output, inspect);
     }
@@ -54,36 +58,37 @@ expect.addAssertion('<TestHtmlLike> when diffed with options against <object> <T
 
 expect.addType({
     name: 'HtmlDiffResult',
-    identify: value => value && value.output && value.weight && typeof value.weight.real === 'number'
+    base: 'object',
+    identify: value => value && value.output && typeof value.weight === 'number'
 });
 
 expect.addAssertion('<HtmlDiffResult> to have weight <number>', (expect, subject, weight) => {
-    expect.withError(() => expect(subject.weight.real, 'to equal', weight), e => {
+    expect.withError(() => expect(subject.weight, 'to equal', weight), () => {
         expect.fail({
             diff: function (output) {
                 return {
                     inline: false,
-                    diff: output.error('expected').text(' weight ').gray('to be ').text(weight).gray(' but was ').text(subject.weight.real)
+                    diff: output.error('expected').text(' weight ').gray('to be ').text(weight).gray(' but was ').text(subject.weight)
                 };
             }
-        })
+        });
     });
 });
 
 expect.addAssertion('<HtmlDiffResult> to output <magicpen>', (expect, subject, pen) => {
-    expect.withError(() => expect(subject.output, 'to equal', pen), e => {
+    expect.withError(() => expect(subject.output, 'to equal', pen), () => {
       return expect.fail({
-          diff: function (output, diff, inspect, equal) {
+          diff: function (output, diff, inspect) {
              return {
                  inline: false,
                  diff: output.block(function () {
-                     this.append(inspect(subject.output))
+                     this.append(inspect(subject.output));
                  }).sp().block(function () {
-                     this.append(inspect(pen))
+                     this.append(inspect(pen));
                  })
              };
           }
-      })
+      });
     });
 });
 
@@ -92,8 +97,50 @@ expect.addAssertion('<HtmlDiffResult> to output <string>', (expect, subject, val
 });
 
 expect.addAssertion('<HtmlDiffResult> to output with weight <string> <number>', (expect, subject, value, weight) => {
-    expect(subject.output.toString(), 'to equal', value);
+    expect.withError(() => expect(subject.output.toString(), 'to equal', value), e => {
+        return expect.fail({
+            diff: function (output, diff, inspect) {
+                return {
+                    inline: false,
+                    diff: output.block(function () {
+                        this.block(e.getDiff(output).diff).nl(2).block(inspect(subject.diff));
+
+                    })
+                };
+            }
+        });
+    });
     expect(subject, 'to have weight', weight);
+});
+
+expect.addAssertion('<TestHtmlLike> when checked to contain <TestHtmlLike> <assertion>', (expect, subject, value) => {
+    const htmlLikeUnexpected = new HtmlLikeUnexpected(TestAdapter);
+    const result = htmlLikeUnexpected.contains(TestAdapter, subject, value, expect.output,
+        expect.diff.bind(expect), expect.inspect.bind(expect), expect.equal.bind(expect), null);
+    expect.shift(result);
+});
+
+expect.addAssertion('<TestHtmlLike> when checked with options to contain <object> <TestHtmlLike> <assertion>', (expect, subject, options, value) => {
+    const htmlLikeUnexpected = new HtmlLikeUnexpected(TestAdapter);
+    const result = htmlLikeUnexpected.contains(TestAdapter, subject, value, expect.output,
+        expect.diff.bind(expect), expect.inspect.bind(expect), expect.equal.bind(expect), options);
+    expect.shift(result);
+});
+
+expect.addType({
+    name: 'ContainsResult',
+    base: 'object',
+    identify: value => {
+        return value &&
+            typeof value.found === 'boolean' &&
+            value.hasOwnProperty('bestMatch');
+    }
+});
+
+expect.addAssertion('<ContainsResult> to output <string>', (expect, subject, value) => {
+    expect(subject.bestMatch, 'not to be null');
+    expect(subject.bestMatch.output, 'not to be null');
+    expect(subject.bestMatch.output.toString(), 'to equal', value);
 });
 
 
@@ -114,7 +161,7 @@ describe('HtmlLikeComponent', () => {
     it('outputs a formatted output with children', () => {
 
         expect({
-            name: 'div', attribs: {id: 'foo', className: 'bar'}, children: [
+            name: 'div', attribs: { id: 'foo', className: 'bar' }, children: [
                 {
                     name: 'span',
                     attribs: { className: 'child1' },
@@ -142,7 +189,8 @@ describe('HtmlLikeComponent', () => {
 
     });
 
-    it.only('outputs large object attributes over multiple lines', () => {
+    /* TODO: Reenable this test when inspect uses the painter
+    it('outputs large object attributes over multiple lines', () => {
         expect({
                 name: 'div',
                 attribs: {
@@ -156,13 +204,14 @@ describe('HtmlLikeComponent', () => {
             '<div style={{ width: 125, height: 100 }} />');
 
     });
+    */
 
     it('outputs deeply nested children over multiple lines', () => {
 
         expect({
                 name: 'div', attribs: { id: 'outside-wrapper', className: 'wrap-me' }, children: [
                     {
-                        name: 'div', attribs: {id: 'foo', className: 'bar'}, children: [
+                        name: 'div', attribs: { id: 'foo', className: 'bar' }, children: [
                         {
                             name: 'span',
                             attribs: { className: 'child1' },
@@ -184,12 +233,12 @@ describe('HtmlLikeComponent', () => {
             '  </div>\n' +
             '</div>');
 
-    })
+    });
 
     it('outputs children on a single line if it fits', () => {
 
         expect({
-            name: 'div', attribs: {id: 'foo', className: 'bar'}, children: [
+            name: 'div', attribs: { id: 'foo', className: 'bar' }, children: [
                 {
                     name: 'span',
                     children: ['1']
@@ -207,16 +256,13 @@ describe('HtmlLikeComponent', () => {
             name: 'div', attribs: {
                 id: 'foo',
                 className: 'bar blah mcgar',
-                'aria-role': 'special-long-button',
+                'data-role': 'special-long-button',
                 'data-special': 'some other long attrib'
             },
             children: []
         }, 'to inspect as',
-            '<div\n' +
-            '  id="foo"\n' +
-            '  className="bar blah mcgar"\n' +
-            '  aria-role="special-long-button"\n' +
-            '  data-special="some other long attrib"\n' +
+            '<div id="foo" className="bar blah mcgar" data-role="special-long-button"\n' +
+            '   data-special="some other long attrib"\n' +
             '/>');
     });
 
@@ -225,63 +271,18 @@ describe('HtmlLikeComponent', () => {
             name: 'div', attribs: {
                 id: 'foo',
                 className: 'bar blah mcgar',
-                'aria-role': 'special-long-button',
+                'data-role': 'special-long-button',
                 'data-special': 'some other long attrib'
             },
             children: ['some content']
         }, 'to inspect as',
-            '<div\n' +
-            '  id="foo"\n' +
-            '  className="bar blah mcgar"\n' +
-            '  aria-role="special-long-button"\n' +
-            '  data-special="some other long attrib"\n' +
+            '<div id="foo" className="bar blah mcgar" data-role="special-long-button"\n' +
+            '   data-special="some other long attrib"\n' +
             '>\n' +
             '  some content\n' +
             '</div>');
     });
 
-    describe('with no external inspect function', () => {
-
-        let htmlLikeUnexpected;
-        let pen;
-
-        beforeEach(() => {
-
-            htmlLikeUnexpected = new HtmlLikeUnexpected(TestAdapter);
-            pen = new MagicPen();
-            pen.use(MagicPenPrism);
-        });
-
-        it('outputs an object attribute with ellipses', () => {
-
-            htmlLikeUnexpected.inspect({
-                name: 'div', attribs: {special: {abc: 123, def: 'bar'}}, children: []
-            }, 0, pen);
-
-            expect(pen.toString(), 'to equal', '<div special={...} />');
-        });
-    });
-
-    describe('with an external inspect function', () => {
-
-        let htmlLikeUnexpected;
-        let pen;
-
-        beforeEach(() => {
-
-            htmlLikeUnexpected = new HtmlLikeUnexpected(TestAdapter);
-            pen = new MagicPen();
-            pen.use(MagicPenPrism);
-        });
-
-        it('outputs an inspected object attribute', () => {
-
-            htmlLikeUnexpected.inspect({
-                name: 'div', attribs: {special: {abc: 123, def: 'bar'}}, children: []
-            }, 0, pen, value => ('INSPECTED' + value.abc));
-            expect(pen.toString(), 'to equal', "<div special={INSPECTED123} />");
-        });
-    });
 
     describe('diff', () => {
 
@@ -328,7 +329,7 @@ describe('HtmlLikeComponent', () => {
                     name: 'div', attribs: { id: 42 }, children: []
                 },
                 'to output with weight',
-                '<div id="42" // should be id={42}  42\n' +
+                '<div id="42" // should be id={42}\n' +
                 '/>', 1);
 
         });
@@ -371,20 +372,20 @@ describe('HtmlLikeComponent', () => {
         it('breaks the output if there are lots of matching attributes', () => {
 
             const attribs = {
-                attrib1: 'aaa',
-                attrib2: 'hello world',
-                attrib3: 'testing is fun',
-                attrib4: 'hallo welt',
-                attrib5: 'jonny number five'
+                'data-attrib1': 'aaa',
+                'data-attrib2': 'hello world',
+                'data-attrib3': 'testing is fun',
+                'data-attrib4': 'hallo welt',
+                'data-attrib5': 'jonny number five'
             };
 
             const afterAttribs = {
-                after: 'bbb',
-                after2: 'ccc some more words',
-                after3: 'here is some more'
+                'data-after': 'bbb',
+                'data-after2': 'ccc some more words',
+                'data-after3': 'here is some more'
             };
-            const actualAttribs = ObjectAssign({}, attribs, { mismatch: 'foo' }, afterAttribs);
-            const expectedAttribs = ObjectAssign({}, attribs, { mismatch: 'bar' }, afterAttribs);
+            const actualAttribs = ObjectAssign({}, attribs, { 'data-mismatch': 'foo' }, afterAttribs);
+            const expectedAttribs = ObjectAssign({}, attribs, { 'data-mismatch': 'bar' }, afterAttribs);
 
             expect(
                 {
@@ -395,11 +396,12 @@ describe('HtmlLikeComponent', () => {
                     name: 'div', attribs: expectedAttribs, children: []
                 },
                 'to output',
-                '<div attrib1="aaa" attrib2="hello world" attrib3="testing is fun"\n' +
-                '   attrib4="hallo welt" attrib5="jonny number five"\n' +
-                '   mismatch="foo" // should be mismatch="bar" -foo\n' +
-                '                  //                          +bar\n' +
-                '   after="bbb" after2="ccc some more words" after3="here is some more"\n' +
+                '<div data-attrib1="aaa" data-attrib2="hello world" data-attrib3="testing is fun"\n' +
+                '   data-attrib4="hallo welt" data-attrib5="jonny number five"\n' +
+                '   data-mismatch="foo" // should be data-mismatch="bar" -foo\n' +
+                '                       //                               +bar\n' +
+                '   data-after="bbb" data-after2="ccc some more words"\n' +
+                '   data-after3="here is some more"\n' +
                 '/>'
             );
         });
@@ -516,7 +518,7 @@ describe('HtmlLikeComponent', () => {
                 },
                 'to output with weight',
                 '<div id="foo">\n' +
-                '  <div // should be <span>\n' +
+                '  <div // should be <span\n' +
                 '  >\n' +
                 '    one\n' +
                 '  </div>\n' +
@@ -530,7 +532,7 @@ describe('HtmlLikeComponent', () => {
             expect(
                 {
                     name: 'div', attribs: { id: 'foo' }, children: [
-                    { name: 'span', attribs: { id: 'childfoo'}, children: ['one'] },
+                    { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     { name: 'span', attribs: {}, children: ['two'] }
                 ]
                 },
@@ -558,7 +560,7 @@ describe('HtmlLikeComponent', () => {
             expect(
                 {
                     name: 'div', attribs: { id: 'foo' }, children: [
-                    { name: 'span', attribs: { id: 'childfoo'}, children: ['one'] }
+                    { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }
                 ]
                 },
                 'when diffed against',
@@ -581,7 +583,7 @@ describe('HtmlLikeComponent', () => {
             expect(
                 {
                     name: 'div', attribs: { id: 'foo' }, children: [
-                    { name: 'span', attribs: { id: 'childfoo'}, children: ['one'] },
+                    { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     { name: 'span', attribs: {}, children: ['two'] }
                 ]
                 },
@@ -601,14 +603,15 @@ describe('HtmlLikeComponent', () => {
 
         it('diffs a component with a child that is an element and should be a string', () => {
 
+            // override the weight for NATIVE_NONNATIVE_MISMATCH, otherwise a wrapper is preferred
             expect(
                 {
                     name: 'div', attribs: { id: 'foo' }, children: [
-                    { name: 'span', attribs: { id: 'childfoo'}, children: ['one'] },
+                    { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     { name: 'span', attribs: {}, children: ['two'] }
                 ]
                 },
-                'when diffed against',
+                'when diffed with options against', { weights: { NATIVE_NONNATIVE_MISMATCH: 1 } },
                 {
                     name: 'div', attribs: { id: 'foo' }, children: [
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
@@ -619,7 +622,7 @@ describe('HtmlLikeComponent', () => {
                 '<div id="foo">\n' +
                 '  <span id="childfoo">one</span>\n' +
                 "  <span>two</span> // should be 'some text'\n" +
-                '</div>', HtmlLikeUnexpected.DefaultWeights.NATIVE_NONNATIVE_MISMATCH
+                '</div>', 1 // Overridden NATIVE_NONNATIVE_MISMATCH
             );
         });
 
@@ -650,13 +653,13 @@ describe('HtmlLikeComponent', () => {
             expect(
                 {
                     name: 'div', attribs: { id: 'foo' }, children: [
-                    { name: 'span', attribs: { id: 'childfoo'}, children: ['one'] },
+                    { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     { name: 'span', attribs: {}, children: [
-                        { name: 'span', attribs: { className: 'deep'}, children: ['nested and broken over many lines']}
+                        { name: 'span', attribs: { className: 'deep' }, children: ['nested and broken over many lines because it is very long'] }
                     ] }
                 ]
                 },
-                'when diffed against',
+                'when diffed with options against', { weights: { NATIVE_NONNATIVE_MISMATCH: 1 } },
                 {
                     name: 'div', attribs: { id: 'foo' }, children: [
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
@@ -666,10 +669,12 @@ describe('HtmlLikeComponent', () => {
                 'to output with weight',
                 '<div id="foo">\n' +
                 '  <span id="childfoo">one</span>\n' +
-                '  <span>                                                            // \n' +
-                '    <span className="deep">nested and broken over many lines</span> //\n' +
-                "  </span>                                                           // should be 'some text'\n" +
-                '</div>', HtmlLikeUnexpected.DefaultWeights.NATIVE_NONNATIVE_MISMATCH
+                "  <span>                                                        // should be 'some text'\n" +
+                '    <span className="deep">                                     //\n' +
+                '      nested and broken over many lines because it is very long //\n' +
+                '    </span>                                                     //\n' +
+                '  </span>                                                       //\n' +
+                '</div>', 1 // Overridden weight to force a NATIVE_NONNATIVE_MISMATCH
             );
         });
 
@@ -678,7 +683,7 @@ describe('HtmlLikeComponent', () => {
             expect(
                 {
                     name: 'div', attribs: { id: 'foo' }, children: [
-                    { name: 'span', attribs: { id: 'childfoo'}, children: ['one'] },
+                    { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     'some text'
                 ]
                 },
@@ -702,7 +707,7 @@ describe('HtmlLikeComponent', () => {
             expect(
                 {
                     name: 'div', attribs: { id: 'foo' }, children: [
-                    { name: 'span', attribs: { id: 'childfoo'}, children: ['one'] },
+                    { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     'some text'
                 ]
                 },
@@ -711,7 +716,9 @@ describe('HtmlLikeComponent', () => {
                     name: 'div', attribs: { id: 'foo' }, children: [
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     { name: 'span', attribs: {}, children: [
-                        { name: 'span', attribs: { className: 'deep'}, children: ['nested and broken over many lines']}
+                        { name: 'span', attribs: { className: 'deep' }, children: [
+                            'nested and broken over many lines because it is very long'
+                        ] }
                     ] }
                 ]
                 },
@@ -719,7 +726,9 @@ describe('HtmlLikeComponent', () => {
                 '<div id="foo">\n' +
                 '  <span id="childfoo">one</span>\n' +
                 '  some text // should be <span>\n' +
-                '            //             <span className="deep">nested and broken over many lines</span>\n' +
+                '            //             <span className="deep">\n' +
+                '            //               nested and broken over many lines because it is very long\n' +
+                '            //             </span>\n' +
                 '            //           </span>\n' +
                 '</div>', HtmlLikeUnexpected.DefaultWeights.NATIVE_NONNATIVE_MISMATCH
             );
@@ -733,7 +742,7 @@ describe('HtmlLikeComponent', () => {
 
                     expect({
                         name: 'div', attribs: { id: 'foo' }, children: [
-                            { name: 'span', attribs: { id: 'childfoo', extraAttribute: 'does not matter'}, children: ['one'] }
+                            { name: 'span', attribs: { id: 'childfoo', extraAttribute: 'does not matter' }, children: ['one'] }
                         ]
                     }, 'when diffed with options against', { diffExtraAttributes: false }, {
                         name: 'div', attribs: { id: 'foo' }, children: [
@@ -747,7 +756,7 @@ describe('HtmlLikeComponent', () => {
 
                     expect({
                         name: 'div', attribs: { id: 'foo' }, children: [
-                            { name: 'span', attribs: { id: 'childfoo', extraAttribute: 'does matter' }, children: ['one'] }
+                            { name: 'span', attribs: { id: 'childfoo', 'data-extraAttribute': 'does matter' }, children: ['one'] }
                         ]
                     }, 'when diffed with options against', { diffExtraAttributes: true }, {
                         name: 'div', attribs: { id: 'foo' }, children: [
@@ -755,7 +764,8 @@ describe('HtmlLikeComponent', () => {
                         ]
                     }, 'to output with weight',
                         '<div id="foo">\n' +
-                        '  <span id="childfoo" extraAttribute="does matter" // extraAttribute should be removed\n' +
+                        '  <span id="childfoo"\n' +
+                        '     data-extraAttribute="does matter" // data-extraAttribute should be removed\n' +
                         '  >\n' +
                         '    one\n' +
                         '  </span>\n' +
@@ -774,7 +784,7 @@ describe('HtmlLikeComponent', () => {
                         ]
                     }, 'when diffed with options against', { diffRemovedAttributes: true }, {
                         name: 'div', attribs: { id: 'foo' }, children: [
-                            { name: 'span', attribs: { id: 'childfoo', removedAttribute: 'does matter'}, children: ['one'] }
+                            { name: 'span', attribs: { id: 'childfoo', removedAttribute: 'does matter' }, children: ['one'] }
                         ]
                     }, 'to output with weight',
                         '<div id="foo">\n' +
@@ -793,7 +803,7 @@ describe('HtmlLikeComponent', () => {
                         ]
                     }, 'when diffed with options against', { diffRemovedAttributes: false }, {
                         name: 'div', attribs: { id: 'foo' }, children: [
-                            { name: 'span', attribs: { id: 'childfoo', removedAttribute: 'does matter'}, children: ['one'] }
+                            { name: 'span', attribs: { id: 'childfoo', 'data-removedAttribute': 'does matter' }, children: ['one'] }
                         ]
                     }, 'to output with weight',
                         '<div id="foo"><span id="childfoo">one</span></div>', HtmlLikeUnexpected.DefaultWeights.OK);
@@ -1065,16 +1075,16 @@ describe('HtmlLikeComponent', () => {
                         name: 'HigherOrderTopLevel', attribs: { id: 'main' }, children: [
                         {
                             name: 'TopLevel', attribs: {}, children: [
-                            {name: 'span', attribs: {id: 'childfoo'}, children: ['one']},
-                            {name: 'span', attribs: {id: 'childfoo'}, children: ['two']}
+                            { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
+                            { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
                         ]
                         }
                     ]
                     }, 'when diffed against',
                     {
                             name: 'TopLevel', attribs: {}, children: [
-                            {name: 'span', attribs: {id: 'childfoo'}, children: ['one']},
-                            {name: 'span', attribs: {id: 'childfoo'}, children: ['two']}
+                            { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
+                            { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
                     ]
                     }, 'to output with weight',
                     '<HigherOrderTopLevel id="main"> // wrapper should be removed\n' +
@@ -1090,17 +1100,17 @@ describe('HtmlLikeComponent', () => {
                         {
                             name: 'TopLevel', attribs: {}, children: [
                             { name: 'MidLevel', attribs: {}, children: [
-                                {name: 'span', attribs: {id: 'childfoo'}, children: ['one']},
-                                {name: 'span', attribs: {id: 'childfoo'}, children: ['two']}
-                            ]}
+                                { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
+                                { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
+                            ] }
                         ]
                         }
                     ]
                     }, 'when diffed against',
                     {
                         name: 'MidLevel', attribs: {}, children: [
-                        {name: 'span', attribs: {id: 'childfoo'}, children: ['one']},
-                        {name: 'span', attribs: {id: 'childfoo'}, children: ['two']}
+                        { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
+                        { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
                     ]
                     }, 'to output with weight',
                     '<HigherOrderTopLevel id="main"> // wrapper should be removed\n' +
@@ -1118,17 +1128,17 @@ describe('HtmlLikeComponent', () => {
                         {
                             name: 'TopLevel', attribs: {}, children: [
                             { name: 'MidLevel', attribs: {}, children: [
-                                {name: 'span', attribs: {id: 'childfoo'}, children: ['one']},
-                                {name: 'span', attribs: {id: 'childfoo'}, children: ['two']}
-                            ]}
+                                { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
+                                { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
+                            ] }
                         ]
                         }
                     ]
                     }, 'when diffed with options against', { diffWrappers: false },
                     {
                         name: 'MidLevel', attribs: {}, children: [
-                        {name: 'span', attribs: { id: 'childfoo' }, children: ['one']},
-                        {name: 'span', attribs: { id: 'childfoo' }, children: ['two']}
+                        { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
+                        { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
                     ]
                     }, 'to output with weight',
                     '<HigherOrderTopLevel id="main">\n' +
@@ -1146,17 +1156,17 @@ describe('HtmlLikeComponent', () => {
                         {
                             name: 'TopLevel', attribs: { id: 'main' }, children: [
                             { name: 'MidLevel', attribs: {}, children: [
-                                {name: 'span', attribs: {id: 'childfoo'}, children: ['one']},
-                                {name: 'span', attribs: {id: 'childfoo'}, children: ['two']}
-                            ]}
+                                { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
+                                { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
+                            ] }
                         ]
                         }
                     ]
                     }, 'when diffed with options against', { diffWrappers: false },
                     {
                         name: 'TopLevel', attribs: { id: 'main' }, children: [
-                        {name: 'span', attribs: { id: 'childfoo' }, children: ['one']},
-                        {name: 'span', attribs: { id: 'childfoo' }, children: ['changed']}
+                        { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
+                        { name: 'span', attribs: { id: 'childfoo' }, children: ['changed'] }
                     ]
                     }, 'to output with weight',
                     '<HigherOrderTopLevel id="main">\n' +
@@ -1176,13 +1186,13 @@ describe('HtmlLikeComponent', () => {
 
                 expect(
                     {
-                        name: 'HigherOrderTopLevel', attribs: {id: 'main'}, children: [
+                        name: 'HigherOrderTopLevel', attribs: { id: 'main' }, children: [
                         {
                                 name: 'MidLevel', attribs: {}, children: [
                                 {
-                                    name: 'LowLevel', attribs: {id: 'lower'}, children: [
-                                    {name: 'span', attribs: {id: 'childfoo'}, children: ['one']},
-                                    {name: 'span', attribs: {id: 'childfoo'}, children: ['two']}
+                                    name: 'LowLevel', attribs: { id: 'lower' }, children: [
+                                    { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
+                                    { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
                                 ]
                                 }
                         ]
@@ -1190,8 +1200,8 @@ describe('HtmlLikeComponent', () => {
                     ]
                     }, 'when diffed with options against', { diffWrappers: false },
                     { name: 'HigherOrderTopLevel', attribs: { id: 'main' }, children: [
-                                {name: 'span', attribs: {id: 'childfoo'}, children: ['one']},
-                                {name: 'span', attribs: {id: 'childfoo'}, children: ['two']}
+                                { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
+                                { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
                     ]
                     }, 'to output with weight',
                     '<HigherOrderTopLevel id="main">\n' +
@@ -1204,5 +1214,109 @@ describe('HtmlLikeComponent', () => {
             });
 
         });
+    });
+
+    describe('contains', () => {
+
+        it('finds an exact match', () => {
+            expect(
+                { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] },
+                'when checked to contain',
+                { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] },
+                'to satisfy', { found: true });
+        });
+
+        it('reports not found when no exact match exists', () => {
+
+            expect(
+                { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] },
+                'when checked to contain',
+                { name: 'span', attribs: { className: 'foo' }, children: [ 'some other content'] },
+                'to satisfy', { found: false }
+            );
+        });
+
+
+        it('outputs a best match when the content is different', () => {
+
+            expect(
+                { name: 'div', attribs: {}, children: [
+                    { name: 'span', attribs: { className: 'foo' }, children: [ 'some different content' ] }
+                ]
+                },
+                'when checked to contain',
+                { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] },
+                'to output',
+                '<span className="foo">\n' +
+                '  -some different content\n' +
+                '  +some content\n' +
+                '</span>'
+            );
+
+        });
+
+        it('ignores wrappers when diffWrappers:false', () => {
+
+            expect(
+                { name: 'body', attribs: {}, children: [
+
+                    { name: 'div', attribs: {}, children:
+                        [
+                            {
+                                name: 'wrapper', attribs: { className: 'the-wrapper' },
+                                children:
+                                    [
+                                        { name: 'span', attribs: { className: 'foo' }, children: ['some content'] }
+                                    ]
+
+                            }
+                        ]
+                    }
+                ] },
+                'when checked with options to contain', { diffWrappers: false },
+                { name: 'div', attribs: {}, children: [
+                    { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }
+                ] },
+                'to satisfy', { found: true }
+            );
+
+        });
+
+        it('outputs wrappers when diffWrappers:false', () => {
+
+            expect(
+                {
+                    name: 'body', attribs: {}, children: [
+
+                    {
+                        name: 'div', attribs: {}, children: [
+                        {
+                            name: 'wrapper', attribs: { className: 'the-wrapper' },
+                            children: [
+                                { name: 'span', attribs: { className: 'foo' }, children: ['some different content'] }
+                            ]
+
+                        }
+                    ]
+                    }
+                ]
+                },
+                'when checked with options to contain', { diffWrappers: false },
+                {
+                    name: 'div', attribs: {}, children: [
+                    { name: 'span', attribs: { className: 'foo' }, children: ['some content'] }
+                ]
+                },
+                'to output',
+                '<div>\n' +
+                '  <wrapper className="the-wrapper">\n' +
+                '    <span className="foo">\n' +
+                '      -some different content\n' +
+                '      +some content\n' +
+                '    </span>\n' +
+                '  </wrapper>\n' +
+                '</div>');
+        });
+
     });
 });

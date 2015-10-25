@@ -37,7 +37,7 @@ Weights.prototype.addTotal = function (weight) {
 
 Weights.prototype.addWeight = function (weight) {
     if (!weight instanceof Weights) {
-        throw new Error('addWeight can only add other Weight objects')
+        throw new Error('addWeight can only add other Weight objects');
     }
     this.real += weight.real;
     this.total += weight.total;
@@ -52,6 +52,6 @@ Weights.prototype.addWeight = function (weight) {
 Weights.prototype.setName = function (name) {
     this.name = '(' + this.unique + ') ' + name;
     return this;
-}
+};
 
 module.exports = Weights;

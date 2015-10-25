@@ -95,6 +95,7 @@ function breakAt(pen, maxWidth) {
                         width = 0;
                         resultPen.nl();
                         needIndent = true;
+                        hadLineBreaks = true; // TODO: Need linebreaker test for this line here
                     }
                     width += size.width;
 
@@ -134,6 +135,7 @@ function breakAt(pen, maxWidth) {
                 });
 
                 if (isMultiline) {
+                    let previousLineBreak = false;
                     pens.forEach((entry, index) => {
                         if (entry.outdentOnBreak) {
                             resultPen.outdentLines();
@@ -149,9 +151,10 @@ function breakAt(pen, maxWidth) {
                             resultPen.indentLines();
                             indentCount++;
                         }
+                        previousLineBreak = addBreak;
                     });
                 } else {
-                    pens.forEach((entry, index) => {
+                    pens.forEach(entry => {
                         resultPen.append(entry.pen);
                     });
 
@@ -170,7 +173,11 @@ function breakAt(pen, maxWidth) {
                 }
             }
 
-            return resultPen;
+            return {
+                output: resultPen,
+                breakAfter: pens.length && pens[pens.length - 1].forceLineBreak,
+                breakBefore: pens.length && pens[0].forceLineBreakBefore
+            };
         }
 
     };
