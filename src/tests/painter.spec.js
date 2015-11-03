@@ -97,8 +97,9 @@ describe('Painter', () => {
         }, expect.inspect, expect.diff);
 
         expect(pen.toString(), 'to equal',
-            '<div id="abc" // should be id="123" -abc\n' +
-            '              //                    +123\n' +
+            '<div id="abc" // should be id="123"\n' +
+            '              // -abc\n' +
+            '              // +123\n' +
             '/>');
     });
 
@@ -114,6 +115,44 @@ describe('Painter', () => {
 
         expect(pen.toString(), 'to equal',
             '<div id="123" // should be id={123}\n' +
+            '/>');
+    });
+
+
+    it('outputs a different boolean attribute', () => {
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'div',
+            attributes: [
+                { name: 'disabled', value: true, diff: { type: 'changed', expectedValue: false } }
+            ]
+        }, expect.inspect);
+
+        expect(pen.toString(), 'to equal',
+            '<div disabled={true} // should be disabled={false}\n' +
+            '/>');
+    });
+
+
+    it('outputs a changed attribute with an object diff', () => {
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'div',
+            attributes: [
+                { name: 'id', value: { abc: 123, def: 'ghi' }, diff: { type: 'changed', expectedValue: { abc: 123, def: 'ghij'} } }
+            ]
+        }, expect.inspect, expect.diff);
+
+        expect(pen.toString(), 'to equal',
+            "<div id={{ abc: 123, def: 'ghi' }} // should be id={{ abc: 123, def: 'ghij' }}\n" +
+            '                                   // {\n' +
+            '                                   //   abc: 123,\n' +
+            "                                   //   def: 'ghi' // should equal 'ghij'\n" +
+            '                                   //              // -ghi\n' +
+            '                                   //              // +ghij\n' +
+            '                                   // }\n' +
             '/>');
     });
 
@@ -277,8 +316,9 @@ describe('Painter', () => {
 
         expect(pen.toString(), 'to equal',
         '<div>\n' +
-        '  <span id="abc" // should be id="abcd" -abc\n' +
-        '                 //                     +abcd\n' +
+        '  <span id="abc" // should be id="abcd"\n' +
+        '                 // -abc\n' +
+        '                 // +abcd\n' +
         '  />\n' +
         '</div>');
     });
@@ -628,6 +668,52 @@ describe('Painter', () => {
             '  some more text //\n' +
             '</div>');
     });
+
+    it('outputs a missing text element', () => {
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'div',
+            children: [
+                {
+                    type: 'CONTENT',
+                    value: 'some text',
+                    diff: {
+                        type: 'missing'
+                    }
+                }
+            ]
+        }, expect.inspect, expect.diff);
+
+        expect(pen.toString(), 'to equal',
+            '<div>\n' +
+            '  // missing some text\n' +
+            '</div>');
+    });
+
+    it('outputs a missing text element over multiple lines', () => {
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'div',
+            children: [
+                {
+                    type: 'CONTENT',
+                    value: 'some text\nsome more text',
+                    diff: {
+                        type: 'missing'
+                    }
+                }
+            ]
+        }, expect.inspect, expect.diff);
+
+        expect(pen.toString(), 'to equal',
+            '<div>\n' +
+            '  // missing some text\n' +
+            '  //         some more text\n' +
+            '</div>');
+    });
+
 
     it('outputs an extra wrapper', () => {
 

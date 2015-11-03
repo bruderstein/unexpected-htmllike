@@ -87,6 +87,23 @@ describe('contains', () => {
         } });
     });
 
+    it('finds a best match in an array of children with an extra attribute', () => {
+
+        const containsResult = getContains(
+            { name: 'div', attribs: {}, children: [
+                { name: 'span', attribs: { className: 'foo' }, children: [ 'some content' ] },
+                { name: 'span', attribs: { className: 'bar' }, children: [ 'some content' ] },
+                { name: 'span', attribs: { className: 'candidate', id: 'abc' }, children: [ 'some content' ] }
+            ]
+            },
+            { name: 'span', attribs: { className: 'candidate' }, children: [ 'some content'] }
+        );
+
+        expect(containsResult, 'to satisfy', { found: false, bestMatchItem: {
+            name: 'span', attribs: { className: 'candidate', id: 'abc' }, children: [ 'some content' ]
+        } });
+    })
+
     it('returns a diff when the content is different', () => {
 
         const containsResult = getContains(

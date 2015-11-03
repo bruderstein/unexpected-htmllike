@@ -1,40 +1,8 @@
 
 import LineBreaker from './lineBreaker';
+import isNativeType from './isNativeType';
 
 const WRAP_WIDTH = 80;
-
-/**
- *
- * @param pen
- * @param description
- * @param inspect
- * @param diffFn
- *
- * Outputs the element described by `description`
- *
- * `description` is as follows:
- *
- * type: 'ELEMENT'    // 'ELEMENT' or 'CONTENT'
- *   name: 'div'      // element name  (mandatory for type 'ELEMENT')
- *   attributes: [    // array of attributes
- *      {
- *         name: 'id'    // name of the attribute
- *         value: 'abc'  // value of the attribute
- *         diff: {
- *           type: 'changed'          // 'changed', 'missing' or 'extra'
- *           expectedValue: 'abcd'    // expected value - only for 'changed'
- *           value: 'abc'             // value - only for 'missing'
- *         }
- *      }
- *   ]
- *
- *  type: 'CONTENT'   // element textual (or numeric, for React) content
- *  value: 'foo'      // text content
- *  diff: {
- *     type: 'changed'              // 'changed', 'missing' or 'extra' (same as attribute)
- *  }
- *
- */
 
 export default function painter(pen, description, inspect, diffFn) {
 
@@ -49,7 +17,7 @@ export default function painter(pen, description, inspect, diffFn) {
                         painter(this, {
                             type: description.type,
                             name: description.name,
-                            value: description.diff.expectedValue,
+                            value: description.value,
                             attributes: description.attributes,
                             children: description.children
                         }, inspect, diffFn);
@@ -285,17 +253,17 @@ function outputAttribute(pen, name, value, diff, inspect, diffFn) {
                     pen.error('should be ');
                     outputRawAttribute(pen, name, diff.expectedValue, inspect);
 
-                    if (typeof value === 'string' && typeof diff.expectedValue === 'string') {
+                    if (typeof value === typeof diff.expectedValue && typeof value !== 'boolean') {
                         const valueDiff = diffFn(value, diff.expectedValue);
 
                         if (valueDiff && valueDiff.inline) {
-                            pen.sp().block(valueDiff.diff);
+                            pen.nl().block(valueDiff.diff);
                         } else if (valueDiff) {
-                            pen.sp().block(function () {
+                            pen.nl().block(function () {
                                 this.append(valueDiff.diff);
                             });
                         } else {
-                            pen.sp().block(function () {
+                            pen.nl().block(function () {
                                 this.append(inspect(diff.expectedValue));
                             });
                         }

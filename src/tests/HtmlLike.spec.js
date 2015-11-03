@@ -8,6 +8,7 @@ import MagicPen from 'magicpen';
 import MagicPenPrism from 'magicpen-prism';
 import Unexpected from 'unexpected';
 import ObjectAssign from 'object-assign';
+import Diff from '../diff';
 
 const expect = Unexpected.clone();
 
@@ -312,8 +313,9 @@ describe('HtmlLikeComponent', () => {
                     name: 'div', attribs: { id: 'bar' }, children: []
                 },
                 'to output',
-                '<div id="foo" // should be id="bar" -foo\n' +
-                '              //                    +bar\n' +
+                '<div id="foo" // should be id="bar"\n' +
+                '              // -foo\n' +
+                '              // +bar\n' +
                 '/>'
             );
 
@@ -330,7 +332,7 @@ describe('HtmlLikeComponent', () => {
                 },
                 'to output with weight',
                 '<div id="42" // should be id={42}\n' +
-                '/>', 1);
+                '/>', Diff.DefaultWeights.ATTRIBUTE_MISMATCH);
 
         });
 
@@ -345,8 +347,9 @@ describe('HtmlLikeComponent', () => {
                     name: 'div', attribs: { id: 'bar', className: 'testing' }, children: []
                 },
                 'to output',
-                '<div id="foo" // should be id="bar" -foo\n' +
-                '              //                    +bar\n' +
+                '<div id="foo" // should be id="bar"\n' +
+                '              // -foo\n' +
+                '              // +bar\n' +
                 '   className="testing"\n' +
                 '/>'
             );
@@ -363,8 +366,9 @@ describe('HtmlLikeComponent', () => {
                     name: 'div', attribs: { className: 'testing', id: 'bar' }, children: []
                 },
                 'to output',
-                '<div className="testing" id="foo" // should be id="bar" -foo\n' +
-                '                                  //                    +bar\n' +
+                '<div className="testing" id="foo" // should be id="bar"\n' +
+                '                                  // -foo\n' +
+                '                                  // +bar\n' +
                 '/>'
             );
         });
@@ -398,8 +402,9 @@ describe('HtmlLikeComponent', () => {
                 'to output',
                 '<div data-attrib1="aaa" data-attrib2="hello world" data-attrib3="testing is fun"\n' +
                 '   data-attrib4="hallo welt" data-attrib5="jonny number five"\n' +
-                '   data-mismatch="foo" // should be data-mismatch="bar" -foo\n' +
-                '                       //                               +bar\n' +
+                '   data-mismatch="foo" // should be data-mismatch="bar"\n' +
+                '                       // -foo\n' +
+                '                       // +bar\n' +
                 '   data-after="bbb" data-after2="ccc some more words"\n' +
                 '   data-after3="here is some more"\n' +
                 '/>'
@@ -545,8 +550,9 @@ describe('HtmlLikeComponent', () => {
                 },
                 'to output with weight',
                 '<div id="foo">\n' +
-                '  <span id="childfoo" // should be id="childbar" -childfoo\n' +
-                '                      //                         +childbar\n' +
+                '  <span id="childfoo" // should be id="childbar"\n' +
+                '                      // -childfoo\n' +
+                '                      // +childbar\n' +
                 '  >\n' +
                 '    one\n' +
                 '  </span>\n' +
@@ -974,8 +980,9 @@ describe('HtmlLikeComponent', () => {
                     '<body id="main">\n' +
                     '  <div id="wrapper"> // wrapper should be removed\n' +
                     '    <span id="childfoo">one</span>\n' +
-                    '    <span id="childfoo" // should be id="other" -childfoo\n' +
-                    '                        //                      +other\n' +
+                    '    <span id="childfoo" // should be id="other"\n' +
+                    '                        // -childfoo\n' +
+                    '                        // +other\n' +
                     '    >\n' +
                     '      -two\n' +
                     '      +changed\n' +
