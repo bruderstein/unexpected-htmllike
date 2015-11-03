@@ -80,6 +80,35 @@ describe('diff', () => {
         });
     });
 
+    it('diffs an extra attribute and a changed attribute', () => {
+
+        const result = getDiff( { name: 'span', attribs: { id: 'abc', className: 'foo' }, children: ['some text'] },
+            { name: 'span', attribs: { id: 'abcd' }, children: ['some text'] });
+
+        expect(result, 'to satisfy', {
+            diff: {
+                attributes: [
+                    {
+                        name: 'id',
+                        value: 'abc',
+                        diff: {
+                            type: 'changed',
+                            expectedValue: 'abcd'
+                        }
+                    },
+                    {
+                        name: 'className',
+                        value: 'foo',
+                        diff: {
+                            type: 'extra'
+                        }
+                    }
+                ]
+            },
+            weight: Diff.DefaultWeights.ATTRIBUTE_EXTRA + Diff.DefaultWeights.ATTRIBUTE_MISMATCH
+        });
+    });
+
     it('diffs a removed attribute', () => {
 
         const result = getDiff( { name: 'span', attribs: {}, children: ['some text'] },
@@ -316,6 +345,68 @@ describe('diff', () => {
                             type: 'CONTENT',
                             value: 'child3'
                         }]
+                    }
+                ]
+            },
+            weight: Diff.DefaultWeights.CHILD_INSERTED
+        });
+    });
+
+    it('diffs a missing content entry', () => {
+        const result = getDiff( { name: 'span', attribs: {}, children: [
+                 'child1', 'child3'] },
+                { name: 'span', attribs: {}, children: [
+                 'child1', 'child2', 'child3'] });
+
+        // See comments in 'diffs a removed middle child' as to why this isn't an ideal diff
+        expect(result, 'to satisfy', {
+            diff: {
+                children: [
+                    {
+                        type: 'CONTENT',
+                        value: 'child1'
+                    },
+                    {
+                        type: 'CONTENT',
+                        value: 'child2',
+                        diff: {
+                            type: 'missing'
+                        }
+                    },
+                    {
+                        type: 'CONTENT',
+                        value: 'child3'
+                    }
+                ]
+            },
+            weight: Diff.DefaultWeights.CHILD_INSERTED
+        });
+    });
+
+    it('diffs an extra content entry', () => {
+        const result = getDiff( { name: 'span', attribs: {}, children: [
+                'child1', 'child2', 'child3'] },
+            { name: 'span', attribs: {}, children: [
+                'child1', 'child3'] });
+
+        // See comments in 'diffs a removed middle child' as to why this isn't an ideal diff
+        expect(result, 'to satisfy', {
+            diff: {
+                children: [
+                    {
+                        type: 'CONTENT',
+                        value: 'child1'
+                    },
+                    {
+                        type: 'CONTENT',
+                        value: 'child2',
+                        diff: {
+                            type: 'extra'
+                        }
+                    },
+                    {
+                        type: 'CONTENT',
+                        value: 'child3'
                     }
                 ]
             },
@@ -940,5 +1031,109 @@ describe('diff', () => {
         });
 
     });
+
+    it("doesn't wrap an element when it means there are missing children", () => {
+
+        /*  This is an awkward special case.
+         *  When given the following actual
+         *  <SomeElement>
+         *      <ThisIsNotAWrapper />
+         *  </SomeElement>
+         *
+         *  vs expected
+         *
+         *  <SomeElement>
+         *      <ExpectedElement />
+         *  </SomeElement>
+         *
+         *  We would expect
+         *  <SomeElement>
+         *      <ThisIsNotAWrapper // should be <ExpectedElement
+         *      />
+         *  </SomeElement>
+         *
+         *   But, because element name changes have a large weight, and we're not diffing wrappers,
+         *   what we get by default is
+         *   <SomeElement>
+         *     <ThisIsNotAWrapper>                  <-- Greyed out as it's identified as a wrapper
+         *       // missing <ExpectedElement />     <-- Identified as a missing child
+         *     </ThisIsNotAWrapper>                 <-- Greyed out as it's identified as a wrapper
+         *   </SomeElement>
+         */
+        const result = getDiff(
+            {
+                name: 'SomeElement',
+                attribs: {},
+                children: [
+                    { name: 'ThisIsNotAWrapper', attribs: {}, children: [] }
+                ]
+            },
+            {
+                name: 'SomeElement',
+                attribs: {},
+                children: [
+                    { name: 'ExpectedElement', attribs: {}, children: [] }
+                ]
+            },
+            { diffWrappers: false });
+
+        expect(result, 'to satisfy', {
+            diff: {
+                type: 'ELEMENT',
+                name: 'SomeElement',
+                attributes: [],
+                children: [
+                    {
+                        type: 'ELEMENT',
+                        name: 'ThisIsNotAWrapper',
+                        diff: {
+                            type: 'differentElement',
+                            expectedName: 'ExpectedElement'
+                        }
+                    }
+
+                ]
+            },
+            weight: Diff.DefaultWeights.NAME_MISMATCH
+        });
+    });
+
+    it('diffs extra children when the expected has no children but wrappers are allowed', () => {
+
+        // This checks the case that an actual that has a child that shouldn't,
+        // isn't simply marked as a wrapper - ie. a wrapper must wrap something!
+
+        const result = getDiff(
+            {
+                name: 'SomeElement',
+                attribs: {},
+                children: [
+                    { name: 'div', attribs: {}, children: [] }
+                ]
+            },
+            {
+                name: 'SomeElement',
+                attribs: {},
+                children: []
+            },
+            { diffWrappers: false });
+
+        expect(result, 'to satisfy', {
+            diff: {
+                type: 'ELEMENT',
+                name: 'SomeElement',
+                children: [
+                    {
+                        type: 'ELEMENT',
+                        name: 'div',
+                        diff: {
+                            type: 'extra'
+                        }
+                    }
+                ]
+            }
+        })
+    })
+
 
 });

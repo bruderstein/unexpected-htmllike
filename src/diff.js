@@ -11,14 +11,21 @@ const DefaultWeights = {
     OK: 0,                  // Only here as a convenience for tests, WEIGHT_OK is used as the constant
     NATIVE_NONNATIVE_MISMATCH: 15,
     NAME_MISMATCH: 10,
-    ATTRIBUTE_MISMATCH: 1,
-    ATTRIBUTE_MISSING: 1,
+    ATTRIBUTE_MISMATCH: 2,
+    ATTRIBUTE_MISSING: 2,
     ATTRIBUTE_EXTRA: 1,     // Actual contains an attribute that is not expected
     STRING_CONTENT_MISMATCH: 3,
     CONTENT_TYPE_MISMATCH: 1,
     CHILD_MISSING: 2,
     CHILD_INSERTED: 2,
-    WRAPPER_REMOVED: 3
+    WRAPPER_REMOVED: 3,
+    ALL_CHILDREN_MISSING: 8  // When the expected has children, and actual has no children
+                             // This + CHILD_MISSING should be equal or greater than NAME_MISMATCH
+                             // to avoid a name-changed child causing the actual rendered child to
+                             // be identified as a wrapper, and the actual child as a missing child
+                             // of the wrapper (see the test
+                             // "doesn't wrap an element when it means there are missing children"
+                             // for an example)
 };
 
 const defaultOptions = {
@@ -254,6 +261,7 @@ function diffContent(actualAdapter, expectedAdapter, actual, expected, equal, op
 
     if ((!bestWeight || bestWeight.real !== WEIGHT_OK) &&
         actual.length === 1 &&
+        expected.length !== 0 &&
         !isNativeType(actual[0])) {
         // Try it as a wrapper, and see if it's better
         // Also covered here is a wrapper around several children
@@ -300,16 +308,6 @@ function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedCh
         },
 
         function (a, b) {
-            // Figure out whether a and b are the same element so they can be diffed inline.
-            var aIsNativeType = isNativeType(a);
-            var bIsNativeType = isNativeType(b);
-            if (aIsNativeType && bIsNativeType) {
-                return true;
-            }
-
-            if (aIsNativeType !== bIsNativeType) {
-                return false;
-            }
             // Any element that is not identical, is not similar.
             // We could call diffElementOrWrapper again, and compare the weight to some arbitrary amount,
             // But the amount is dependant on the other items. What is right for one case, will almost certainly be wrong for another
@@ -357,6 +355,10 @@ function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedCh
         }
 
     });
+
+    if (actualChildren.length === 0 && expectedChildren.length !== 0 && options.diffMissingChildren) {
+        diffWeights.add(options.weights.ALL_CHILDREN_MISSING);
+    }
 
     return {
         weight: diffWeights,
