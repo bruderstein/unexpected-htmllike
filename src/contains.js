@@ -7,9 +7,7 @@ function contains(actualAdapter, expectedAdapter, actual, expected, equal, optio
     const result = containsContent(actualAdapter, expectedAdapter, actual, expected, equal, options);
 
     // If result has WRAPPERELEMENTs around it, remove them
-    if (!result.found) {
-        stripWrapperElements(actualAdapter, result);
-    }
+    stripWrapperElements(actualAdapter, result);
 
     return result;
 }
@@ -37,6 +35,8 @@ function containsContent(actualAdapter, expectedAdapter, actual, expected, equal
     let diffResult = Diff.diffElements(actualAdapter, expectedAdapter, actual, expected, equal, options);
     if (diffResult.weight === Diff.DefaultWeights.OK) {
         result.found = true;
+        result.bestMatch = diffResult;
+        result.bestMatchItem = actual;
         return result;
     }
     result.bestMatch = diffResult;
@@ -51,7 +51,8 @@ function containsContent(actualAdapter, expectedAdapter, actual, expected, equal
                 // If we've found it, return the result immediately
                 if (childResult.found) {
                     result.found = true;
-                    result.bestMatch = null;
+                    result.bestMatch = childResult.bestMatch;
+                    result.bestMatchItem = childResult.bestMatchItem;
                     return result;
                 }
 

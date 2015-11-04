@@ -29,7 +29,26 @@ describe('contains', () => {
             { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }
         );
 
-        expect(containsResult, 'to satisfy', { found: true, bestMatch: null });
+        expect(containsResult, 'to satisfy', { found: true });
+    });
+
+    it('reports the inspection of the found item', () => {
+
+        const containsResult = getContains(
+            { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] },
+            { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }
+        );
+
+        expect(containsResult, 'to satisfy', {
+            found: true,
+            bestMatch: {
+                diff: {
+                    type: 'ELEMENT',
+                    name: 'span',
+                    attributes: [ { name: 'className', value: 'foo' } ]
+                }
+            }
+        });
     });
 
     it('reports not found when no exact match exists', () => {
@@ -52,7 +71,7 @@ describe('contains', () => {
             { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }
         );
 
-        expect(containsResult, 'to satisfy', { found: true, bestMatch: null });
+        expect(containsResult, 'to satisfy', { found: true });
     });
 
     it('finds a deep nested element', () => {
@@ -69,7 +88,13 @@ describe('contains', () => {
             { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }
         );
 
-        expect(containsResult, 'to satisfy', { found: true, bestMatch: null });
+        expect(containsResult, 'to satisfy', { found: true, bestMatch: {
+            diff: {
+                type: 'ELEMENT',
+                name: 'span',
+                attributes: [ { name: 'className', value: 'foo' } ]
+            }
+        } });
     });
 
     it('finds a best match when the content is different', () => {
@@ -195,6 +220,44 @@ describe('contains', () => {
                     type: 'ELEMENT',
                     name: 'div',      // Top level in the diff is the div, not the body
                     children: [ {
+                        type: 'WRAPPERELEMENT',
+                        name: 'wrapper'
+                    }]
+                }
+            }
+        });
+    });
+
+    it('doesn\'t include wrappers in the bestMatch around an item that is found to match', () => {
+
+        const containsResult = getContains(
+            {
+                name: 'body', attribs: {}, children: [{
+                name: 'div', attribs: {}, children: [
+                    {
+                        name: 'wrapper', attribs: { className: 'the-wrapper' },
+                        children: [
+                            { name: 'span', attribs: { className: 'foo' }, children: ['some content'] }
+                        ]
+
+                    }
+                ]
+            }]
+            },
+            {
+                name: 'div', attribs: {}, children: [
+                { name: 'span', attribs: { className: 'foo' }, children: ['some content'] }
+            ]
+            },
+            { diffWrappers: false });
+
+        expect(containsResult, 'to satisfy', {
+            found: true,
+            bestMatch: {
+                diff: {
+                    type: 'ELEMENT',
+                    name: 'div',      // Top level in the diff is the div, not the body
+                    children: [{
                         type: 'WRAPPERELEMENT',
                         name: 'wrapper'
                     }]
