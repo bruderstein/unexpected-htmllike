@@ -50,12 +50,16 @@ export default function painter(pen, description, inspect, diffFn) {
                 }
                 pen.prismPunctuation('>')
                     .sp()
-                    .annotationBlock('wrapper should be removed');
+                    .annotationBlock(function () {
+                        this.error('wrapper should be removed');
+                    });
 
                 outputChildren(pen, description, inspect, diffFn, true);
                 pen.prismPunctuation('</')
                     .prismTag(description.name)
-                    .prismPunctuation('>').sp().annotationBlock('wrapper should be removed');
+                    .prismPunctuation('>').sp().annotationBlock(function () {
+                    this.error('wrapper should be removed');
+                });
                 return;
 
             case 'differentElement':
@@ -189,25 +193,25 @@ function outputElement(pen, description, inspect, diffFn) {
 
 function outputWrapperElement(pen, description, inspect, diffFn) {
 
-    pen.prismPunctuation('<')
-        .prismPunctuation(description.name);
+    pen.gray('<')
+        .gray(description.name);
 
     if (description.attributes) {
         const attribPen = pen.clone();
         outputAttributes(attribPen, description.attributes, inspect, diffFn);
         attribPen.replaceText(function (styles, text) {
-            this.text(text, 'prismPunctuation');
+            this.text(text, 'gray');
         });
         pen.append(attribPen);
     }
 
 
-    pen.prismPunctuation('>');
+    pen.gray('>');
     outputChildren(pen, description, inspect, diffFn, true);
 
-    pen.prismPunctuation('</')
-        .prismPunctuation(description.name)
-        .prismPunctuation('>');
+    pen.gray('</')
+        .gray(description.name)
+        .gray('>');
 
 }
 

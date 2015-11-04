@@ -805,7 +805,7 @@ describe('Painter', () => {
         }, expect.inspect, expect.diff);
 
         expect(pen, 'to equal',
-            expect.output.clone().prismPunctuation('<div className="foo">')
+            expect.output.clone().gray('<div className="foo">')
                     .nl().indentLines().i()
                     .block(function () {
                         this.prismPunctuation('<')
@@ -816,7 +816,7 @@ describe('Painter', () => {
                             .prismTag('span')
                             .prismPunctuation('>');
                     })
-            .nl().prismPunctuation('</div>')
+            .nl().gray('</div>')
         );
     });
 
