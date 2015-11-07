@@ -298,6 +298,32 @@ function diffContent(actualAdapter, expectedAdapter, actual, expected, equal, op
 
 function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, equal, options) {
 
+
+    let onlyExact = true;
+    const exactDiffResult = tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, equal, options, onlyExact);
+
+    // If it wasn't a perfect match, and there were both inserts and removals, we can try allowing the children that
+    // don't match to be "similar".
+    if (exactDiffResult.weight.real !== 0 && exactDiffResult.insertCount && exactDiffResult.removeCount) {
+        onlyExact = false;
+        const changesDiffResult = tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, equal, options, onlyExact);
+        if (changesDiffResult.weight.real < exactDiffResult.weight.real) {
+            return {
+                diff: changesDiffResult.diff,
+                weight: changesDiffResult.weight
+            };
+        }
+    }
+
+    return {
+        diff: exactDiffResult.diff,
+        weight: exactDiffResult.weight
+    };
+
+}
+
+function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, equal, options, onlyExactMatches) {
+
     let diffWeights = new Weights();
     const diffResult = [];
 
@@ -308,19 +334,39 @@ function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedCh
         },
 
         function (a, b) {
-            // Any element that is not identical, is not similar.
-            // We could call diffElementOrWrapper again, and compare the weight to some arbitrary amount,
-            // But the amount is dependant on the other items. What is right for one case, will almost certainly be wrong for another
 
-            return false;
+            if (onlyExactMatches) {
+                return false;
+            }
+            var aIsNativeType = isNativeType(a);
+            var bIsNativeType = isNativeType(b);
+
+            // If they're native types, assume they're similar
+            if (aIsNativeType && bIsNativeType) {
+                return true;
+            }
+
+            // If one is an element, then don't count them as "similar"
+            if (aIsNativeType !== bIsNativeType) {
+                return false;
+            }
+
+            // Here we could diff and get a weight, but the weight as to what is similar is dependant on
+            // what the other "similar" elements got, so we'll just take a simplistic view -
+            // elements with the same name are similar, otherwise they're not
+            return (actualAdapter.getName(a) === expectedAdapter.getName(b));
         } );
 
+    let insertCount = 0;
+    let removeCount = 0;
+    let changeCount = 0;
     changes.forEach(diffItem => {
 
         let itemResult;
 
         switch(diffItem.type) {
             case 'insert':
+                insertCount++;
                 itemResult = convertToDiff(expectedAdapter, diffItem.value);
                 if (options.diffMissingChildren) {
                     diffWeights.add(options.weights.CHILD_MISSING);
@@ -332,6 +378,7 @@ function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedCh
                 break;
 
             case 'remove':
+                removeCount++;
                 itemResult = convertToDiff(actualAdapter, diffItem.value);
 
                 if (options.diffExtraChildren) {
@@ -343,6 +390,10 @@ function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedCh
                 diffWeights.addTotal(options.weights.CHILD_INSERTED);
                 diffResult.push(itemResult);
                 break;
+
+            case 'similar':
+                changeCount++;
+                // fallthrough
 
             case 'equal':
             default:
@@ -362,7 +413,10 @@ function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedCh
 
     return {
         weight: diffWeights,
-        diff: diffResult
+        diff: diffResult,
+        insertCount,
+        removeCount,
+        changeCount
     };
 }
 

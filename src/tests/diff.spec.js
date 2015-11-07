@@ -352,6 +352,57 @@ describe('diff', () => {
         });
     });
 
+    it('diffs a changed middle child', () => {
+
+        const result = getDiff( { name: 'span', attribs: {}, children: [
+                { name: 'child', attribs: {}, children: ['child1'] },
+                { name: 'child', attribs: {}, children: ['child2 changed'] },
+                { name: 'child', attribs: {}, children: ['child3'] }
+            ] },
+            { name: 'span', attribs: {}, children: [
+                { name: 'child', attribs: {}, children: ['child1'] },
+                { name: 'child', attribs: {}, children: ['child2'] },
+                { name: 'child', attribs: {}, children: ['child3'] }
+            ] });
+
+        expect(result, 'to satisfy', {
+            diff: {
+                children: [
+                    {
+                        type: 'ELEMENT',
+                        name: 'child',
+                        children: [{
+                            type: 'CONTENT',
+                            value: 'child1'
+                        }]
+                    },
+                    {
+                        type: 'ELEMENT',
+                        name: 'child',
+                        children: [{
+                            type: 'CONTENT',
+                            value: 'child2 changed',
+                            diff: {
+                                type: 'changed',
+                                expectedValue: 'child2'
+                            }
+                        }]
+                    },
+                    {
+                        type: 'ELEMENT',
+                        name: 'child',
+                        diff: undefined,
+                        children: [{
+                            type: 'CONTENT',
+                            value: 'child3'
+                        }]
+                    }
+                ]
+            },
+            weight: Diff.DefaultWeights.STRING_CONTENT_MISMATCH
+        });
+    });
+
     it('diffs a missing content entry', () => {
         const result = getDiff( { name: 'span', attribs: {}, children: [
                  'child1', 'child3'] },
