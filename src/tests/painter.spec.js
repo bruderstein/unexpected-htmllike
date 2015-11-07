@@ -8,6 +8,7 @@ const expect = Unexpected
     .clone()
     .use(MagicPenPrism);
 
+expect.output.preferredWidth = 80;
 
 function duplicate(object, count) {
     const result = [];
@@ -115,6 +116,21 @@ describe('Painter', () => {
 
         expect(pen.toString(), 'to equal',
             '<div id="123" // should be id={123}\n' +
+            '/>');
+    });
+
+    it('outputs a different attribute type and value', () => {
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'div',
+            attributes: [
+                { name: 'id', value: '123', diff: { type: 'changed', expectedValue: 1234 } }
+            ]
+        }, expect.inspect);
+
+        expect(pen.toString(), 'to equal',
+            '<div id="123" // should be id={1234}\n' +
             '/>');
     });
 
@@ -473,6 +489,31 @@ describe('Painter', () => {
             '<div>\n' +
             '  123 // mismatched type -string\n' +
             '      //                 +number\n' +
+            '</div>');
+
+    });
+
+    it('outputs a changed type and value content', () => {
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'div',
+            children: [
+                {
+                    type: 'CONTENT',
+                    value: '1234',
+                    diff: {
+                        type: 'changed',
+                        expectedValue: 123
+                    }
+                }
+            ]
+        }, expect.inspect, expect.diff);
+
+        expect(pen.toString(), 'to equal',
+            '<div>\n' +
+            '  -1234 // and mismatched type -string\n' +
+            '  +123  //                     +number\n' +
             '</div>');
 
     });
