@@ -21,6 +21,7 @@ const TestAdapter = {
             return [].concat([], comp.children);
         }
 };
+expect.output.preferredWidth = 80;
 
 expect.addType({
     name: 'TestHtmlLike',

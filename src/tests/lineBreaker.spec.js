@@ -4,6 +4,7 @@ import MagicPen from 'magicpen';
 import LineBreaker from '../lineBreaker';
 
 const expect = Unexpected.clone();
+expect.output.preferredWidth = 80;
 
 describe('magicpen-linebreaker', () => {
 
