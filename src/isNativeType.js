@@ -5,7 +5,8 @@ export default function isNativeType(value) {
         type === 'number' ||
         type === 'boolean' ||
         type === 'undefined' ||
-        value === null;
+        value === null ||
+        (type === 'function' && value._expectIt);
 }
 
 

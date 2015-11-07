@@ -156,7 +156,22 @@ export default function painter(pen, description, inspect, diffFn) {
                         });
                         break;
 
+                    case 'custom':
+
+                        pen.text(description.value).sp().annotationBlock(function () {
+                            pen.addStyle('appendInspected', function (arg) {
+                                this.append(inspect(arg))
+                            });
+                            this.append(description.diff.error.getErrorMessage(pen))
+                        });
+                        if (pen.forceLineBreak) {
+                            pen.forceLineBreakBefore();
+                        }
+                        break;
+
                 }
+            } else if (typeof description.value === 'function' && description.value._expectIt) {
+                pen.prismPunctuation('{').append(inspect(description.value)).prismPunctuation('}');
             } else {
                 pen.text(description.value);
             }
@@ -279,6 +294,17 @@ function outputAttribute(pen, name, value, diff, inspect, diffFn) {
                         }
                     }
                 }).forceLineBreak();
+                break;
+
+            case 'custom':
+                outputRawAttribute(pen, name, value, inspect);
+                pen.sp().annotationBlock(pen => {
+                    pen.addStyle('appendInspected', function (arg) {
+                        this.append(inspect(arg));
+                    });
+                    pen.block(diff.error.getErrorMessage(pen));
+                }).forceLineBreak();
+
                 break;
             case 'missing':
                 pen.annotationBlock(pen => {

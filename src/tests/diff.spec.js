@@ -1183,7 +1183,142 @@ describe('diff', () => {
                     }
                 ]
             }
-        })
+        });
+    });
+
+    describe('expect.it', () => {
+
+        it('accepts a passing expect.it attribute assertion', () => {
+
+            const result = getDiff({
+                    type: 'ELEMENT',
+                    name: 'SomeElement',
+                    attribs: {
+                        className: 'abcde'
+                    }
+                },
+                {
+                    name: 'SomeElement',
+                    attribs: {
+                        className: expect.it('to match', /[a-e]+$/)
+                    }
+                }
+            );
+
+
+            expect(result, 'to satisfy', {
+                diff: {
+                    type: 'ELEMENT',
+                    name: 'SomeElement',
+                    attributes: [ {
+                        name: 'className',
+                        value: 'abcde',
+                        diff: undefined
+                    }]
+                }
+            });
+        });
+
+        it('diffs an expect.it attribute assertion', () => {
+
+            const result = getDiff({
+                type: 'ELEMENT',
+                name: 'SomeElement',
+                attribs: {
+                    className: 'abcde'
+                }
+            },
+                {
+                    name: 'SomeElement',
+                    attribs: {
+                        className: expect.it('to match', /[a-d]+$/)
+                    }
+                }
+            );
+
+
+            expect(result, 'to satisfy', {
+                diff: {
+                    type: 'ELEMENT',
+                    name: 'SomeElement',
+                    attributes: [ {
+                        name: 'className',
+                        value: 'abcde',
+                        diff: {
+                            type: 'custom',
+                            assertion: expect.it('to be a', 'function')
+                        }
+                    }]
+                },
+                weight: Diff.DefaultWeights.ATTRIBUTE_MISMATCH
+            });
+
+        });
+
+        it('diffs an expect.it content assertion', () => {
+
+            const result = getDiff({
+                    type: 'ELEMENT',
+                    name: 'SomeElement',
+                    attribs: {},
+                    children: [ 'abcde' ]
+                },
+                {
+                    name: 'SomeElement',
+                    attribs: {},
+                    children: [expect.it('to match', /[a-d]+$/) ]
+                }
+            );
+
+            expect(result, 'to satisfy', {
+                diff: {
+                    type: 'ELEMENT',
+                    name: 'SomeElement',
+                    children: [{
+                        type: 'CONTENT',
+                        value: 'abcde',
+                        diff: {
+                            type: 'custom',
+                            assertion: expect.it('to be a', 'function'),
+                            error: expect.it('to be a', 'UnexpectedError')
+                                         .and('to have message', 'expected \'abcde\' to match /[a-d]+$/')
+                        }
+                    }]
+                },
+                weight: Diff.DefaultWeights.STRING_CONTENT_MISMATCH
+            });
+
+        });
+
+        it('returns a CONTENT type for a passed content assertion', () => {
+
+            const result = getDiff({
+                    type: 'ELEMENT',
+                    name: 'SomeElement',
+                    attribs: {},
+                    children: [ 'abcd' ]
+                },
+                {
+                    name: 'SomeElement',
+                    attribs: {},
+                    children: [expect.it('to match', /[a-d]+$/) ]
+                }
+            );
+
+            expect(result, 'to satisfy', {
+                diff: {
+                    type: 'ELEMENT',
+                    name: 'SomeElement',
+                    children: [{
+                        type: 'CONTENT',
+                        value: 'abcd',
+                        diff: undefined
+                    }]
+                },
+                weight: Diff.DefaultWeights.OK
+            });
+
+        });
     })
 
 

@@ -99,6 +99,35 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, equal, op
 
     const actualIsNative = isNativeType(actual);
     const expectedIsNative = isNativeType(expected);
+
+    if (expectedIsNative && typeof expected === 'function' && expected._expectIt) {
+        try {
+            expected(actual);
+
+            diffResult.type = 'CONTENT';
+            diffResult.value = actual;
+            // Assertion passed
+            return {
+                diff: diffResult,
+                weight: weights
+            };
+
+        } catch (e) {
+            diffResult.type = 'CONTENT';
+            diffResult.value = actual;
+            diffResult.diff = {
+                type: 'custom',
+                assertion: expected,
+                error: e
+            };
+            weights.add(options.weights.STRING_CONTENT_MISMATCH);
+            return {
+                diff: diffResult,
+                weight: weights
+            };
+        }
+    }
+
     if (actualIsNative && expectedIsNative) {
 
         diffResult.type = 'CONTENT';
@@ -193,7 +222,21 @@ function diffAttributes(actualAttributes, expectedAttributes, equal, options) {
         diffResult.push(attribResult);
 
         if (expectedAttributes.hasOwnProperty(attrib)) {
-            if (!equal(actualAttributes[attrib], expectedAttributes[attrib])) {
+            const expectedAttrib = expectedAttributes[attrib];
+            if (typeof expectedAttrib === 'function' && expectedAttrib._expectIt) {
+                // This is an assertion in the form of expect.it(...)
+                try {
+                    expectedAttrib(actualAttributes[attrib]);
+                } catch (e) {
+                    attribResult.diff = {
+                        type: 'custom',
+                        assertion: expectedAttrib,
+                        error: e
+                    };
+
+                    diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
+                }
+            } else if (!equal(actualAttributes[attrib], expectedAttributes[attrib])) {
                 diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
                 attribResult.diff = {
                     type: 'changed',
