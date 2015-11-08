@@ -15,12 +15,12 @@ function inspect(adapter, value, depth, output, externalInspector) {
 
 function getDiff(actualAdapter) {
 
-    return function (expectedAdapter, actual, expected, output, diffFn, inspect, equal, options) {
+    return function (expectedAdapter, actual, expected, output, expect, options) {
 
-        const diffResult = diff.diffElements(actualAdapter, expectedAdapter, actual, expected, equal, options);
+        const diffResult = diff.diffElements(actualAdapter, expectedAdapter, actual, expected, expect, options);
 
         const pen = output.clone();
-        Painter(pen, diffResult.diff, inspect, diffFn);
+        Painter(pen, diffResult.diff, expect.inspect.bind(expect), expect.diff.bind(expect));
 
         return {
             output: pen,
@@ -32,13 +32,13 @@ function getDiff(actualAdapter) {
 
 function getContains(actualAdapter) {
 
-    return function (expectedAdapter, actual, expected, output, diffFn, inspect, equal, options) {
+    return function (expectedAdapter, actual, expected, output, expect, options) {
 
-        const result = Contains(actualAdapter, expectedAdapter, actual, expected, equal, options);
+        const result = Contains(actualAdapter, expectedAdapter, actual, expected, expect, options);
 
         if (result.bestMatch) {
             const pen = output.clone();
-            Painter(pen, result.bestMatch.diff, inspect, diffFn);
+            Painter(pen, result.bestMatch.diff, expect.inspect.bind(expect), expect.diff.bind(expect));
             result.bestMatch.output = pen;
         }
         return result;

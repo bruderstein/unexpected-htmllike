@@ -41,12 +41,12 @@ const WEIGHT_OK = 0;
 const WRAP_WIDTH = 80;
 
 
-function diffElements(actualAdapter, expectedAdapter, actual, expected, equal, options) {
+function diffElements(actualAdapter, expectedAdapter, actual, expected, expect, options) {
 
     options = ObjectAssign({}, defaultOptions, options);
     options.weights = ObjectAssign({}, DefaultWeights, options.weights);
 
-    const diffResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, equal, options);
+    const diffResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, options);
     return {
         diff: diffResult.diff,
         weight: diffResult.weight.real
@@ -54,9 +54,9 @@ function diffElements(actualAdapter, expectedAdapter, actual, expected, equal, o
 
 }
 
-function diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, equal, options) {
+function diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, options) {
 
-    let diffResult = diffElement(actualAdapter, expectedAdapter, actual, expected, equal, options);
+    let diffResult = diffElement(actualAdapter, expectedAdapter, actual, expected, expect, options);
 
     if (diffResult.weight.real !== WEIGHT_OK &&
         !isNativeType(actual)) {
@@ -65,7 +65,7 @@ function diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, 
 
         if (actualChildren.length === 1) {
             // Try as wrapper
-            const wrapperResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actualChildren[0], expected, equal, options);
+            const wrapperResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actualChildren[0], expected, expect, options);
             const wrapperWeight = options.diffWrappers ? options.weights.WRAPPER_REMOVED : WEIGHT_OK;
             if ((wrapperWeight + wrapperResult.weight.real) < diffResult.weight.real) {
                 // It is (better as) a wrapper.
@@ -92,7 +92,7 @@ function diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, 
 }
 
 
-function diffElement(actualAdapter, expectedAdapter, actual, expected, equal, options) {
+function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, options) {
 
     const weights = new Weights();
     let diffResult = {};
@@ -195,11 +195,11 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, equal, op
         weights.add(options.weights.NAME_MISMATCH);
     }
 
-    const attribResult = diffAttributes(actualAdapter.getAttributes(actual), expectedAdapter.getAttributes(expected), equal, options);
+    const attribResult = diffAttributes(actualAdapter.getAttributes(actual), expectedAdapter.getAttributes(expected), expect, options);
     diffResult.attributes = attribResult.diff;
     weights.addWeight(attribResult.weight);
 
-    const contentResult = diffContent(actualAdapter, expectedAdapter, actualAdapter.getChildren(actual), expectedAdapter.getChildren(expected), equal, options);
+    const contentResult = diffContent(actualAdapter, expectedAdapter, actualAdapter.getChildren(actual), expectedAdapter.getChildren(expected), expect, options);
     diffResult.children = contentResult.diff;
     weights.addWeight(contentResult.weight);
 
@@ -210,7 +210,7 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, equal, op
 
 }
 
-function diffAttributes(actualAttributes, expectedAttributes, equal, options) {
+function diffAttributes(actualAttributes, expectedAttributes, expect, options) {
 
     let diffWeights = new Weights();
     const diffResult = [];
@@ -236,7 +236,7 @@ function diffAttributes(actualAttributes, expectedAttributes, equal, options) {
 
                     diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
                 }
-            } else if (!equal(actualAttributes[attrib], expectedAttributes[attrib])) {
+            } else if (!expect.equal(actualAttributes[attrib], expectedAttributes[attrib])) {
                 diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
                 attribResult.diff = {
                     type: 'changed',
@@ -279,7 +279,7 @@ function diffAttributes(actualAttributes, expectedAttributes, equal, options) {
     };
 }
 
-function diffContent(actualAdapter, expectedAdapter, actual, expected, equal, options) {
+function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, options) {
 
     let bestWeight = null;
     let bestDiff = null;
@@ -288,13 +288,13 @@ function diffContent(actualAdapter, expectedAdapter, actual, expected, equal, op
     if (actual.length === 1 && expected.length === 1) {
 
         // It's a single element, then just directly compare the elements
-        const singleElementDiff = diffElement(actualAdapter, expectedAdapter, actual[0], expected[0], equal, options);
+        const singleElementDiff = diffElement(actualAdapter, expectedAdapter, actual[0], expected[0], expect, options);
         bestDiff = [singleElementDiff.diff];
         bestWeight = singleElementDiff.weight;
     }
 
     if (!bestWeight || bestWeight.real !== WEIGHT_OK) {
-        const childrenResult = diffChildren(actualAdapter, expectedAdapter, actual, expected, equal, options);
+        const childrenResult = diffChildren(actualAdapter, expectedAdapter, actual, expected, expect, options);
 
         if (!bestWeight || childrenResult.weight.real < bestWeight.real) {
             bestDiff = childrenResult.diff;
@@ -310,7 +310,7 @@ function diffContent(actualAdapter, expectedAdapter, actual, expected, equal, op
         // Also covered here is a wrapper around several children
 
         const actualChildren = actualAdapter.getChildren(actual[0]);
-        const wrapperResult = diffContent(actualAdapter, expectedAdapter, actualChildren, expected, equal, options);
+        const wrapperResult = diffContent(actualAdapter, expectedAdapter, actualChildren, expected, expect, options);
         const wrapperWeight = options.diffWrappers ? options.weights.WRAPPER_REMOVED : WEIGHT_OK;
 
         if (!bestWeight || (wrapperWeight + wrapperResult.weight.real) < bestWeight.real) {
@@ -339,17 +339,17 @@ function diffContent(actualAdapter, expectedAdapter, actual, expected, equal, op
 
 
 
-function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, equal, options) {
+function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options) {
 
 
     let onlyExact = true;
-    const exactDiffResult = tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, equal, options, onlyExact);
+    const exactDiffResult = tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExact);
 
     // If it wasn't a perfect match, and there were both inserts and removals, we can try allowing the children that
     // don't match to be "similar".
     if (exactDiffResult.weight.real !== 0 && exactDiffResult.insertCount && exactDiffResult.removeCount) {
         onlyExact = false;
-        const changesDiffResult = tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, equal, options, onlyExact);
+        const changesDiffResult = tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExact);
         if (changesDiffResult.weight.real < exactDiffResult.weight.real) {
             return {
                 diff: changesDiffResult.diff,
@@ -365,14 +365,14 @@ function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedCh
 
 }
 
-function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, equal, options, onlyExactMatches) {
+function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExactMatches) {
 
     let diffWeights = new Weights();
     const diffResult = [];
 
     var changes = ArrayChanges(actualChildren, expectedChildren,
         function (a, b) {
-            const elementDiff = diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, equal, options);
+            const elementDiff = diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options);
             return elementDiff.weight.total === WEIGHT_OK;
         },
 
@@ -440,7 +440,7 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
 
             case 'equal':
             default:
-                const result = diffElementOrWrapper(actualAdapter, expectedAdapter, diffItem.value, diffItem.expected, equal, options);
+                const result = diffElementOrWrapper(actualAdapter, expectedAdapter, diffItem.value, diffItem.expected, expect, options);
                 itemResult = result.diff;
                 diffWeights.addWeight(result.weight);
                 diffResult.push(itemResult);

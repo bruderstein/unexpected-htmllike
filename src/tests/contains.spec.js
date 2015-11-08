@@ -16,7 +16,7 @@ const TestAdapter = {
 };
 
 function getContains(actual, expected, options) {
-    return Contains(TestAdapter, TestAdapter, actual, expected, expect.equal, options);
+    return Contains(TestAdapter, TestAdapter, actual, expected, expect, options);
 }
 
 

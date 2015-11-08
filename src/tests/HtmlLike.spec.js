@@ -46,7 +46,7 @@ expect.addAssertion('<TestHtmlLike> when diffed against <TestHtmlLike> <assertio
 
     const htmlLikeUnexpected = new HtmlLikeUnexpected(TestAdapter);
     const pen = expect.output.clone();
-    const result = htmlLikeUnexpected.diff(TestAdapter, subject, value, pen, expect.diff.bind(expect), expect.inspect.bind(expect), expect.equal.bind(expect));
+    const result = htmlLikeUnexpected.diff(TestAdapter, subject, value, pen, expect);
     return expect.shift(result);
 });
 
@@ -54,7 +54,7 @@ expect.addAssertion('<TestHtmlLike> when diffed with options against <object> <T
 
     const htmlLikeUnexpected = new HtmlLikeUnexpected(TestAdapter);
     const pen = expect.output.clone();
-    const result = htmlLikeUnexpected.diff(TestAdapter, subject, value, pen, expect.diff.bind(expect), expect.inspect.bind(expect), expect.equal.bind(expect), options);
+    const result = htmlLikeUnexpected.diff(TestAdapter, subject, value, pen, expect, options);
     return expect.shift(result);
 });
 
@@ -117,15 +117,13 @@ expect.addAssertion('<HtmlDiffResult> to output with weight <string> <number>', 
 
 expect.addAssertion('<TestHtmlLike> when checked to contain <TestHtmlLike> <assertion>', (expect, subject, value) => {
     const htmlLikeUnexpected = new HtmlLikeUnexpected(TestAdapter);
-    const result = htmlLikeUnexpected.contains(TestAdapter, subject, value, expect.output,
-        expect.diff.bind(expect), expect.inspect.bind(expect), expect.equal.bind(expect), null);
+    const result = htmlLikeUnexpected.contains(TestAdapter, subject, value, expect.output, expect, null);
     expect.shift(result);
 });
 
 expect.addAssertion('<TestHtmlLike> when checked with options to contain <object> <TestHtmlLike> <assertion>', (expect, subject, options, value) => {
     const htmlLikeUnexpected = new HtmlLikeUnexpected(TestAdapter);
-    const result = htmlLikeUnexpected.contains(TestAdapter, subject, value, expect.output,
-        expect.diff.bind(expect), expect.inspect.bind(expect), expect.equal.bind(expect), options);
+    const result = htmlLikeUnexpected.contains(TestAdapter, subject, value, expect.output, expect, options);
     expect.shift(result);
 });
 

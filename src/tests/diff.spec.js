@@ -15,7 +15,7 @@ const TestAdapter = {
 };
 
 function getDiff(actual, expected, options) {
-    return Diff.diffElements(TestAdapter, TestAdapter, actual, expected, expect.equal, options);
+    return Diff.diffElements(TestAdapter, TestAdapter, actual, expected, expect, options);
 }
 
 describe('diff', () => {
