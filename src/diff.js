@@ -1,4 +1,5 @@
 import ArrayChanges from 'array-changes';
+import ArrayChangesAsync from 'array-changes-async';
 import ObjectAssign from 'object-assign';
 import isNativeType from './isNativeType';
 import convertToDiff from './convertToDiff';
@@ -38,20 +39,18 @@ const defaultOptions = {
 
 const WEIGHT_OK = 0;
 
-const WRAP_WIDTH = 80;
-
-
 function diffElements(actualAdapter, expectedAdapter, actual, expected, expect, options) {
 
     options = ObjectAssign({}, defaultOptions, options);
     options.weights = ObjectAssign({}, DefaultWeights, options.weights);
 
-    const diffResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, options);
-    return {
-        diff: diffResult.diff,
-        weight: diffResult.weight.real
-    };
-
+    return diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, options)
+        .then(diffResult => {
+            return {
+                diff: diffResult.diff,
+                weight: diffResult.weight.real
+            };
+        });
 }
 
 function diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, options) {
@@ -100,19 +99,11 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
     const actualIsNative = isNativeType(actual);
     const expectedIsNative = isNativeType(expected);
 
+    const promises = [];
+
     if (expectedIsNative && typeof expected === 'function' && expected._expectIt) {
-        try {
-            expected(actual);
+        return expect.withError(() => expected(actual), e => {
 
-            diffResult.type = 'CONTENT';
-            diffResult.value = actual;
-            // Assertion passed
-            return {
-                diff: diffResult,
-                weight: weights
-            };
-
-        } catch (e) {
             diffResult.type = 'CONTENT';
             diffResult.value = actual;
             diffResult.diff = {
@@ -125,7 +116,16 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
                 diff: diffResult,
                 weight: weights
             };
-        }
+        }).then(() => {
+
+            diffResult.type = 'CONTENT';
+            diffResult.value = actual;
+            // Assertion passed
+            return {
+                diff: diffResult,
+                weight: weights
+            };
+        });
     }
 
     if (actualIsNative && expectedIsNative) {
@@ -145,10 +145,10 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
             }
         }
 
-        return {
+        return expect.promise.resolve({
             diff: diffResult,
             weight: weights
-        };
+        });
     }
 
     if (actualIsNative && !expectedIsNative) {
@@ -160,10 +160,10 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
             expected: convertToDiff(expectedAdapter, expected)
         };
 
-        return {
+        return expect.promise.resolve({
             diff: diffResult,
             weight: weights
-        };
+        });
     }
 
     if (!actualIsNative && expectedIsNative) {
@@ -174,10 +174,10 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
             expected: convertToDiff(expectedAdapter, expected)
         };
 
-        return {
+        return expect.promise.resolve({
             diff: diffResult,
             weight: weights
-        };
+        });
     }
 
     const actualName = actualAdapter.getName(actual);
@@ -195,18 +195,32 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
         weights.add(options.weights.NAME_MISMATCH);
     }
 
-    const attribResult = diffAttributes(actualAdapter.getAttributes(actual), expectedAdapter.getAttributes(expected), expect, options);
-    diffResult.attributes = attribResult.diff;
-    weights.addWeight(attribResult.weight);
+        const attributesResultPromise = diffAttributes(actualAdapter.getAttributes(actual), expectedAdapter.getAttributes(expected), expect, options)
+            .then(attribResult => {
+                diffResult.attributes = attribResult.diff;
+                weights.addWeight(attribResult.weight);
+            });
 
-    const contentResult = diffContent(actualAdapter, expectedAdapter, actualAdapter.getChildren(actual), expectedAdapter.getChildren(expected), expect, options);
-    diffResult.children = contentResult.diff;
-    weights.addWeight(contentResult.weight);
+        promises.push(attributesResultPromise);
 
-    return {
-        diff: diffResult,
-        weight: weights
-    };
+
+    const contentResultPromise = diffContent(actualAdapter, expectedAdapter, actualAdapter.getChildren(actual), expectedAdapter.getChildren(expected), expect, options)
+        .then(contentResult => {
+
+            diffResult.children = contentResult.diff;
+            weights.addWeight(contentResult.weight);
+        });
+
+    promises.push(contentResultPromise);
+
+    expect.promise.all(promises).then(() => {
+
+        return {
+            diff: diffResult,
+            weight: weights
+        };
+    })
+
 
 }
 
@@ -215,6 +229,9 @@ function diffAttributes(actualAttributes, expectedAttributes, expect, options) {
     let diffWeights = new Weights();
     const diffResult = [];
 
+
+
+    const promises = [];
 
     Object.keys(actualAttributes).forEach(attrib => {
 
@@ -225,9 +242,8 @@ function diffAttributes(actualAttributes, expectedAttributes, expect, options) {
             const expectedAttrib = expectedAttributes[attrib];
             if (typeof expectedAttrib === 'function' && expectedAttrib._expectIt) {
                 // This is an assertion in the form of expect.it(...)
-                try {
-                    expectedAttrib(actualAttributes[attrib]);
-                } catch (e) {
+                const withErrorResult = expect.withError(() => expectedAttrib(actualAttributes[attrib]), e => {
+
                     attribResult.diff = {
                         type: 'custom',
                         assertion: expectedAttrib,
@@ -235,7 +251,10 @@ function diffAttributes(actualAttributes, expectedAttributes, expect, options) {
                     };
 
                     diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
-                }
+                });
+
+                promises.push(withErrorResult);
+
             } else if (!expect.equal(actualAttributes[attrib], expectedAttributes[attrib])) {
                 diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
                 attribResult.diff = {
@@ -273,10 +292,24 @@ function diffAttributes(actualAttributes, expectedAttributes, expect, options) {
         }
     });
 
-    return {
-        diff: diffResult,
-        weight: diffWeights
-    };
+    if (promises.length) {
+        return expect.promise.all(promises)
+            .then(() => {
+                return {
+                    diff: diffResult,
+                    weight: diffWeights
+                };
+            });
+    } else {
+        return expect.promise((resolve, reject) => {
+            return {
+                diff: diffResult,
+                weight: diffWeights
+            }
+        })
+    }
+
+
 }
 
 function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, options) {
@@ -285,56 +318,66 @@ function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, o
     let bestDiff = null;
 
     // Optimize the common case of being exactly one child, ie. an element wrapping something
-    if (actual.length === 1 && expected.length === 1) {
+    // Removed for now, to make this function slightly easier to convert to promises!
+    //if (actual.length === 1 && expected.length === 1) {
+    //    // It's a single element, then just directly compare the elements
+    //    previousStepPromise = diffElement(actualAdapter, expectedAdapter, actual[0], expected[0], expect, options)
+    //    .then(singleElementDiff => {
+    //        bestDiff = [singleElementDiff.diff];
+    //        bestWeight = singleElementDiff.weight;
+    //    });
+    //}
 
-        // It's a single element, then just directly compare the elements
-        const singleElementDiff = diffElement(actualAdapter, expectedAdapter, actual[0], expected[0], expect, options);
-        bestDiff = [singleElementDiff.diff];
-        bestWeight = singleElementDiff.weight;
-    }
-
-    if (!bestWeight || bestWeight.real !== WEIGHT_OK) {
-        const childrenResult = diffChildren(actualAdapter, expectedAdapter, actual, expected, expect, options);
+    return diffChildren(actualAdapter, expectedAdapter, actual, expected, expect, options).then(childrenResult => {
 
         if (!bestWeight || childrenResult.weight.real < bestWeight.real) {
             bestDiff = childrenResult.diff;
             bestWeight = childrenResult.weight;
         }
-    }
+    }).then(() => {
 
-    if ((!bestWeight || bestWeight.real !== WEIGHT_OK) &&
-        actual.length === 1 &&
-        expected.length !== 0 &&
-        !isNativeType(actual[0])) {
-        // Try it as a wrapper, and see if it's better
-        // Also covered here is a wrapper around several children
 
-        const actualChildren = actualAdapter.getChildren(actual[0]);
-        const wrapperResult = diffContent(actualAdapter, expectedAdapter, actualChildren, expected, expect, options);
-        const wrapperWeight = options.diffWrappers ? options.weights.WRAPPER_REMOVED : WEIGHT_OK;
+        if ((!bestWeight || bestWeight.real !== WEIGHT_OK) &&
+            actual.length === 1 &&
+            expected.length !== 0 && !isNativeType(actual[0])) {
+            // Try it as a wrapper, and see if it's better
+            // Also covered here is a wrapper around several children
 
-        if (!bestWeight || (wrapperWeight + wrapperResult.weight.real) < bestWeight.real) {
-            // It could be a wrapper
-            bestWeight = wrapperResult.weight;
-            bestWeight.addTotal(options.weights.WRAPPER_REMOVED);
-            const actualDiff = convertToDiff(actualAdapter, actual[0], { includeChildren: false });
-            actualDiff.children = wrapperResult.diff;
-            if (options.diffWrappers) {
-                actualDiff.diff = {
-                    type: 'wrapper'
-                };
-                bestWeight.addReal(options.weights.WRAPPER_REMOVED);
-            } else {
-                actualDiff.type = 'WRAPPERELEMENT';
-            }
-            bestDiff = [actualDiff];
+            const actualChildren = actualAdapter.getChildren(actual[0]);
+            return diffContent(actualAdapter, expectedAdapter, actualChildren, expected, expect, options);
         }
-    }
 
-    return {
-        diff: bestDiff,
-        weight: bestWeight
-    };
+        return null;
+
+    }).then(wrapperResult => {
+
+        if (wrapperResult) {
+            const wrapperWeight = options.diffWrappers ? options.weights.WRAPPER_REMOVED : WEIGHT_OK;
+
+            if (!bestWeight || (wrapperWeight + wrapperResult.weight.real) < bestWeight.real) {
+                // It could be a wrapper
+                bestWeight = wrapperResult.weight;
+                bestWeight.addTotal(options.weights.WRAPPER_REMOVED);
+                const actualDiff = convertToDiff(actualAdapter, actual[0], { includeChildren: false });
+                actualDiff.children = wrapperResult.diff;
+                if (options.diffWrappers) {
+                    actualDiff.diff = {
+                        type: 'wrapper'
+                    };
+                    bestWeight.addReal(options.weights.WRAPPER_REMOVED);
+                } else {
+                    actualDiff.type = 'WRAPPERELEMENT';
+                }
+                bestDiff = [actualDiff];
+            }
+        }
+    }).then(() => {
+        return {
+            diff: bestDiff,
+            weight: bestWeight
+        };
+    });
+
 }
 
 
@@ -343,124 +386,134 @@ function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedCh
 
 
     let onlyExact = true;
-    const exactDiffResult = tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExact);
+    let bestDiffResult = null;
 
-    // If it wasn't a perfect match, and there were both inserts and removals, we can try allowing the children that
-    // don't match to be "similar".
-    if (exactDiffResult.weight.real !== 0 && exactDiffResult.insertCount && exactDiffResult.removeCount) {
-        onlyExact = false;
-        const changesDiffResult = tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExact);
-        if (changesDiffResult.weight.real < exactDiffResult.weight.real) {
-            return {
-                diff: changesDiffResult.diff,
-                weight: changesDiffResult.weight
-            };
-        }
-    }
 
-    return {
-        diff: exactDiffResult.diff,
-        weight: exactDiffResult.weight
-    };
+    return tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExact)
+        .then(exactDiffResult => {
 
+            bestDiffResult = exactDiffResult;
+
+            // If it wasn't a perfect match, and there were both inserts and removals, we can try allowing the children that
+            // don't match to be "similar".
+            if (exactDiffResult.weight.real !== 0 && exactDiffResult.insertCount && exactDiffResult.removeCount) {
+                onlyExact = false;
+                return tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExact);
+            }
+            return null;
+
+        })
+        .then(changesDiffResult => {
+
+            if (changesDiffResult && changesDiffResult.weight.real < bestDiffResult.weight.real) {
+                bestDiffResult = changesDiffResult;
+            }
+            return bestDiffResult;
+        });
 }
 
 function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExactMatches) {
 
     let diffWeights = new Weights();
     const diffResult = [];
+    const promises = [];
 
-    var changes = ArrayChanges(actualChildren, expectedChildren,
-        function (a, b) {
-            const elementDiff = diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options);
-            return elementDiff.weight.total === WEIGHT_OK;
+    ArrayChangesAsync(actualChildren, expectedChildren,
+        function (a, b, callback) {
+            diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options).then(elementDiff => {
+                return callback(elementDiff.weight.total === WEIGHT_OK);
+            });
         },
 
-        function (a, b) {
+        function (a, b, callback) {
 
             if (onlyExactMatches) {
-                return false;
+                return callback(false);
             }
             var aIsNativeType = isNativeType(a);
             var bIsNativeType = isNativeType(b);
 
             // If they're native types, assume they're similar
             if (aIsNativeType && bIsNativeType) {
-                return true;
+                return callback(true);
             }
 
             // If one is an element, then don't count them as "similar"
             if (aIsNativeType !== bIsNativeType) {
-                return false;
+                return callback(false);
             }
 
             // Here we could diff and get a weight, but the weight as to what is similar is dependant on
             // what the other "similar" elements got, so we'll just take a simplistic view -
             // elements with the same name are similar, otherwise they're not
-            return (actualAdapter.getName(a) === expectedAdapter.getName(b));
+            return callback(actualAdapter.getName(a) === expectedAdapter.getName(b));
+        }, function (changes) {
+
+            // TODO: Need to collect promises, and then wait for them all to resolve at the end
+            // Need to be careful with the non async stuff, such that the order is correct
+
+            let insertCount = 0;
+            let removeCount = 0;
+            let changeCount = 0;
+            changes.forEach(diffItem => {
+
+                let itemResult;
+
+                switch(diffItem.type) {
+                    case 'insert':
+                        insertCount++;
+                        itemResult = convertToDiff(expectedAdapter, diffItem.value);
+                        if (options.diffMissingChildren) {
+                            diffWeights.add(options.weights.CHILD_MISSING);
+                            itemResult.diff = {
+                                type: 'missing'
+                            };
+                            diffResult.push(itemResult);
+                        }
+                        break;
+
+                    case 'remove':
+                        removeCount++;
+                        itemResult = convertToDiff(actualAdapter, diffItem.value);
+
+                        if (options.diffExtraChildren) {
+                            itemResult.diff = {
+                                type: 'extra'
+                            };
+                            diffWeights.addReal(options.weights.CHILD_INSERTED);
+                        }
+                        diffWeights.addTotal(options.weights.CHILD_INSERTED);
+                        diffResult.push(itemResult);
+                        break;
+
+                    case 'similar':
+                        changeCount++;
+                    // fallthrough
+
+                    case 'equal':
+                    default:
+                        const result = diffElementOrWrapper(actualAdapter, expectedAdapter, diffItem.value, diffItem.expected, expect, options);
+                        itemResult = result.diff;
+                        diffWeights.addWeight(result.weight);
+                        diffResult.push(itemResult);
+
+                        break;
+                }
+
+            });
+
+            if (actualChildren.length === 0 && expectedChildren.length !== 0 && options.diffMissingChildren) {
+                diffWeights.add(options.weights.ALL_CHILDREN_MISSING);
+            }
+
+            return {
+                weight: diffWeights,
+                diff: diffResult,
+                insertCount,
+                removeCount,
+                changeCount
+            };
         } );
-
-    let insertCount = 0;
-    let removeCount = 0;
-    let changeCount = 0;
-    changes.forEach(diffItem => {
-
-        let itemResult;
-
-        switch(diffItem.type) {
-            case 'insert':
-                insertCount++;
-                itemResult = convertToDiff(expectedAdapter, diffItem.value);
-                if (options.diffMissingChildren) {
-                    diffWeights.add(options.weights.CHILD_MISSING);
-                    itemResult.diff = {
-                        type: 'missing'
-                    };
-                    diffResult.push(itemResult);
-                }
-                break;
-
-            case 'remove':
-                removeCount++;
-                itemResult = convertToDiff(actualAdapter, diffItem.value);
-
-                if (options.diffExtraChildren) {
-                    itemResult.diff = {
-                        type: 'extra'
-                    };
-                    diffWeights.addReal(options.weights.CHILD_INSERTED);
-                }
-                diffWeights.addTotal(options.weights.CHILD_INSERTED);
-                diffResult.push(itemResult);
-                break;
-
-            case 'similar':
-                changeCount++;
-                // fallthrough
-
-            case 'equal':
-            default:
-                const result = diffElementOrWrapper(actualAdapter, expectedAdapter, diffItem.value, diffItem.expected, expect, options);
-                itemResult = result.diff;
-                diffWeights.addWeight(result.weight);
-                diffResult.push(itemResult);
-
-                break;
-        }
-
-    });
-
-    if (actualChildren.length === 0 && expectedChildren.length !== 0 && options.diffMissingChildren) {
-        diffWeights.add(options.weights.ALL_CHILDREN_MISSING);
-    }
-
-    return {
-        weight: diffWeights,
-        diff: diffResult,
-        insertCount,
-        removeCount,
-        changeCount
-    };
 }
 
 export default {
