@@ -1,5 +1,8 @@
 # unexpected-htmllike
 
+![tattoo](https://cloud.githubusercontent.com/assets/91716/11163196/8215efc2-8ac6-11e5-86da-7285585ab3ef.jpg)
+(Image from http://www.idyllramblings.com/2010/03/the-geekiest-tattoos-you-ever-did-see.html)
+
 Beautifully painted [magicpen](https://github.com/sunesimonsen/magicpen) generation and output of diffs and inspections for HTML-like structures.
 
 ![fulldemo](https://cloud.githubusercontent.com/assets/91716/10930973/a9ed17ba-82c3-11e5-8afc-393f8bca147d.png)
