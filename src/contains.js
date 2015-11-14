@@ -4,12 +4,13 @@ import isNativeType from './isNativeType';
 
 function contains(actualAdapter, expectedAdapter, actual, expected, equal, options) {
 
-    const result = containsContent(actualAdapter, expectedAdapter, actual, expected, equal, options);
+    return containsContent(actualAdapter, expectedAdapter, actual, expected, equal, options)
+        .then(result => {
 
-    // If result has WRAPPERELEMENTs around it, remove them
-    stripWrapperElements(actualAdapter, result);
-
-    return result;
+            // If result has WRAPPERELEMENTs around it, remove them
+            stripWrapperElements(actualAdapter, result);
+            return result;
+        });
 }
 
 function stripWrapperElements(actualAdapter, containsResult) {
@@ -32,39 +33,56 @@ function containsContent(actualAdapter, expectedAdapter, actual, expected, equal
         bestMatchItem: null
     };
 
-    let diffResult = Diff.diffElements(actualAdapter, expectedAdapter, actual, expected, equal, options);
-    if (diffResult.weight === Diff.DefaultWeights.OK) {
-        result.found = true;
+    return Diff.diffElements(actualAdapter, expectedAdapter, actual, expected, equal, options).then(diffResult => {
+
+        if (diffResult.weight === Diff.DefaultWeights.OK) {
+            result.found = true;
+            result.bestMatch = diffResult;
+            result.bestMatchItem = actual;
+            return result;
+        }
         result.bestMatch = diffResult;
         result.bestMatchItem = actual;
-        return result;
-    }
-    result.bestMatch = diffResult;
-    result.bestMatchItem = actual;
 
-    if (!isNativeType(actual)) {
-        const children = actualAdapter.getChildren(actual);
-        if (children) {
-            for(let index = 0; index < children.length; ++index) {
-                const child = children[index];
-                const childResult = containsContent(actualAdapter, expectedAdapter, child, expected, equal, options);
-                // If we've found it, return the result immediately
-                if (childResult.found) {
-                    result.found = true;
-                    result.bestMatch = childResult.bestMatch;
-                    result.bestMatchItem = childResult.bestMatchItem;
-                    return result;
-                }
+        if (!isNativeType(actual)) {
+            const children = actualAdapter.getChildren(actual);
+            if (children) {
 
-                if (!result.bestMatch || childResult.bestMatch.weight < result.bestMatch.weight) {
-                    result.bestMatch = childResult.bestMatch;
-                    result.bestMatchItem = childResult.bestMatchItem;
-                }
+                const childrenLength = children.length;
+
+                const checkChild = function (childIndex) {
+
+                    return containsContent(actualAdapter, expectedAdapter, children[childIndex], expected, equal, options).then(childResult => {
+
+                        if (childResult.found) {
+                            return {
+                                found: true,
+                                bestMatch: childResult.bestMatch,
+                                bestMatchItem: childResult.bestMatchItem
+                            };
+                        }
+
+                        if (!result.bestMatch || childResult.bestMatch.weight < result.bestMatch.weight) {
+                            result.bestMatch = childResult.bestMatch;
+                            result.bestMatchItem = childResult.bestMatchItem;
+                        }
+
+                        if (childIndex < childrenLength) {
+
+                            return checkChild(childIndex + 1);
+                        }
+
+                        return result;
+                    });
+                };
+
+
+                return checkChild(0);
             }
         }
-    }
 
-    return result;
+        return result;
+    });
 
 }
 

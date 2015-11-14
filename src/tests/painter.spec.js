@@ -18,6 +18,13 @@ function duplicate(object, count) {
     return result;
 }
 
+expect.addAssertion('<object> to output <string>', function (expect, subject, result) {
+
+    const pen = expect.output.clone();
+    Painter(pen, subject, expect.inspect.bind(expect), expect.diff.bind(expect));
+    expect(pen.toString(), 'to equal', result);
+});
+
 describe('Painter', () => {
 
     let pen;
@@ -157,7 +164,7 @@ describe('Painter', () => {
             type: 'ELEMENT',
             name: 'div',
             attributes: [
-                { name: 'id', value: { abc: 123, def: 'ghi' }, diff: { type: 'changed', expectedValue: { abc: 123, def: 'ghij'} } }
+                { name: 'id', value: { abc: 123, def: 'ghi' }, diff: { type: 'changed', expectedValue: { abc: 123, def: 'ghij' } } }
             ]
         }, expect.inspect, expect.diff);
 
@@ -1178,5 +1185,138 @@ describe('Painter', () => {
         '  <span>two</span> // should be \'some text\'\n' +
         '</div>');
 
+    });
+
+    describe('expect.it', () => {
+
+        it('should diff an expect.it assertion attribute', () => {
+
+            // Generate an UnexpectedError
+            let error;
+            try {
+                expect('abcde', 'to match', /[a-d]+$/);
+            } catch (e) {
+                error = e;
+            }
+
+            expect({
+                type: 'ELEMENT',
+                name: 'div',
+                attributes: [{
+                    name: 'className',
+                    value: 'abcde',
+                    diff: {
+                        type: 'custom',
+                        assertion: expect.it('to match', /[a-d]+$/),
+                        error: error
+                    }
+                }],
+                children: []
+            }, 'to output',
+                '<div className="abcde" // expected \'abcde\' to match /[a-d]+$/\n' +
+                '/>');
+
+        });
+
+        it('should diff an expect.it assert content', () => {
+
+            // Generate an UnexpectedError
+            let error;
+            try {
+                expect('abcde', 'to match', /[a-d]+$/);
+            } catch (e) {
+                error = e;
+            }
+
+            expect({
+                    type: 'ELEMENT',
+                    name: 'div',
+                    children: [{
+                        type: 'CONTENT',
+                        value: 'abcde',
+                        diff: {
+                            type: 'custom',
+                            assertion: expect.it('to match', /[a-d]+$/),
+                            error: error
+                        }
+                    }]
+                }, 'to output',
+                '<div>\n' +
+                '  abcde // expected \'abcde\' to match /[a-d]+$/\n' +
+                '</div>');
+        });
+
+        it('should diff an expect.it assert content on numbers', () => {
+
+            // Generate an UnexpectedError
+            let error;
+            try {
+                expect(17, 'to be a string');
+            } catch (e) {
+                error = e;
+            }
+
+            expect({
+                    type: 'ELEMENT',
+                    name: 'div',
+                    children: [{
+                        type: 'CONTENT',
+                        value: 17,
+                        diff: {
+                            type: 'custom',
+                            assertion: expect.it('to match', /[a-d]+$/),
+                            error: error
+                        }
+                    }]
+                }, 'to output',
+                '<div>\n' +
+                '  17 // expected 17 to be a string\n' +
+                '</div>');
+        });
+
+        it('should diff an expect.it assert content over multiple lines', () => {
+
+            // Generate an UnexpectedError
+            let error;
+            try {
+                expect('abcde', 'to be a string').and('to have length', 4);
+            } catch (e) {
+                error = e;
+            }
+
+            expect({
+                    type: 'ELEMENT',
+                    name: 'div',
+                    children: [{
+                        type: 'CONTENT',
+                        value: 'abcde',
+                        diff: {
+                            type: 'custom',
+                            assertion: expect.it('to be a string').and('to have length', 4),
+                            error: error
+                        }
+                    }]
+                }, 'to output',
+                '<div>\n' +
+                '  abcde // expected \'abcde\' to have length 4\n' +
+                '        //   expected 5 to be 4\n' +
+                '</div>');
+        });
+
+        it('should show an expect.it assertion when the value is an assertion', () => {
+
+            expect({
+                    type: 'ELEMENT',
+                    name: 'div',
+                    children: [{
+                        type: 'CONTENT',
+                        value: expect.it('to be a', 'string').and('to have length', 4)
+                    }]
+                }, 'to output',
+                '<div>\n' +
+                "  {expect.it('to be a', 'string')\n" +
+                "          .and('to have length', 4)}\n" +   // TODO: I don't understand why this is indented wrong
+                '</div>');
+        });
     });
 });
