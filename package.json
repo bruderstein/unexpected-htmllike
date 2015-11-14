@@ -1,6 +1,6 @@
 {
   "name": "unexpected-htmllike",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Helper library for unexpected plugins that perform assertions on XML like structures",
   "author": {
     "name": "Dave Brotherstone",
@@ -9,6 +9,7 @@
   "scripts": {
     "build": "babel src -d lib --source-maps true",
     "test": "mocha --compilers js:babel/register src/**/tests/*.spec.js",
+    "lint": "eslint src",
     "prepublish": "npm run build && npm test"
   },
   "main": "lib/index.js",
@@ -23,10 +24,10 @@
     "magicpen": "^5.4.0",
     "magicpen-prism": "^2.2.1",
     "mocha": "^2.3.3",
-    "unexpected": "^10.0.1"
+    "unexpected": "^10.1.0"
   },
   "dependencies": {
-    "array-changes": "^1.0.3",
+    "array-changes-async": "^2.0.0",
     "object-assign": "^4.0.1"
   },
   "license": "MIT",
