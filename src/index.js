@@ -1,5 +1,4 @@
 
-import ArrayChanges from 'array-changes';
 import isNativeType from './isNativeType';
 import diff from './diff';
 import Painter from './painter';
@@ -17,16 +16,19 @@ function getDiff(actualAdapter) {
 
     return function (expectedAdapter, actual, expected, output, expect, options) {
 
-        const diffResult = diff.diffElements(actualAdapter, expectedAdapter, actual, expected, expect, options);
+        return diff.diffElements(actualAdapter, expectedAdapter, actual, expected, expect, options).then(diffResult => {
 
-        const pen = output.clone();
-        Painter(pen, diffResult.diff, expect.inspect.bind(expect), expect.diff.bind(expect));
+            const pen = output.clone();
+            Painter(pen, diffResult.diff, expect.inspect.bind(expect), expect.diff.bind(expect));
 
-        return {
-            output: pen,
-            diff: diffResult.diff,
-            weight: diffResult.weight
-        };
+            return {
+                output: pen,
+                diff: diffResult.diff,
+                weight: diffResult.weight
+            };
+
+        });
+
     };
 }
 
@@ -34,14 +36,16 @@ function getContains(actualAdapter) {
 
     return function (expectedAdapter, actual, expected, output, expect, options) {
 
-        const result = Contains(actualAdapter, expectedAdapter, actual, expected, expect, options);
+        return Contains(actualAdapter, expectedAdapter, actual, expected, expect, options).then(result => {
 
-        if (result.bestMatch) {
-            const pen = output.clone();
-            Painter(pen, result.bestMatch.diff, expect.inspect.bind(expect), expect.diff.bind(expect));
-            result.bestMatch.output = pen;
-        }
-        return result;
+            if (result.bestMatch) {
+                const pen = output.clone();
+                Painter(pen, result.bestMatch.diff, expect.inspect.bind(expect), expect.diff.bind(expect));
+                result.bestMatch.output = pen;
+            }
+            return result;
+        });
+
     };
 }
 

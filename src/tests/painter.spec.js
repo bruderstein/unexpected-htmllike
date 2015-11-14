@@ -164,7 +164,7 @@ describe('Painter', () => {
             type: 'ELEMENT',
             name: 'div',
             attributes: [
-                { name: 'id', value: { abc: 123, def: 'ghi' }, diff: { type: 'changed', expectedValue: { abc: 123, def: 'ghij'} } }
+                { name: 'id', value: { abc: 123, def: 'ghi' }, diff: { type: 'changed', expectedValue: { abc: 123, def: 'ghij' } } }
             ]
         }, expect.inspect, expect.diff);
 

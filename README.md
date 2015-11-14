@@ -164,10 +164,13 @@ Removing the wrapper, results in
 If `diffWrappers == true`, then `WRAPPER_REMOVED` (== 3) is added to this.
 
 ### Return value
-`diff` returns an object with the following 2 properties:
+`diff` returns a promise, which resolves with an object with the following 2 properties:
 
 * `weight` - the resulting weight from the diff. If this is `0`, the actual and expected match according to the `options` provided.
 * `diff` - the output of the diff, with differences highlighted.
+
+**Note that the promise is always resolved (unless of a bug or a real issue in a assertion), whether a difference is recorded or not.**
+To check that the `actual` and `expected` are equivalent (given the options provided), check that the `weight` is zero.
 
 ## contains (expectedAdapter, actual, expected, output, diff, inspect, equal, options)
 
@@ -176,7 +179,7 @@ including the options for flags and weights (`options` can also be null, to acce
 for information on the parameters.
 
 ### Return value
-`contains` returns an object, with the following properties
+`contains` returns a promise, which resolves with an object, with the following properties
 * `found` - (boolean) - true if a match was found
 * `bestMatch` - (object) - if `found` is false, `bestMatch` contains the best located match, and is the same result as the `diff` function.
 That is to say that `bestMatch` has the following properties:
@@ -184,6 +187,9 @@ That is to say that `bestMatch` has the following properties:
 ** `diff` - (magicpen) the diff output of the best matching element, against the `expected` value
 * `bestMatchItem` - this is the element in whatever form the `actual` value takes that matched the best. This could be useful to identify the actual
 node that matched the best, and is provided only for convenience.
+
+**Note that the promise is always resolved (unless of a bug or a real issue in a assertion), whether the content is `found` or not.**
+
 
 # Contributing
 
