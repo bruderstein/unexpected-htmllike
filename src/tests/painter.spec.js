@@ -241,6 +241,29 @@ describe('Painter', () => {
             '/>');
     });
 
+    it('outputs many attributes over multiple lines', () => {
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'div',
+            attributes: [
+                { name: 'id', value: 'very-long-attribute-value' },
+                { name: 'data-value1', value: 'very-long-attribute-value' },
+                { name: 'data-value2', value: 'very-long-attribute-value' }
+            ],
+            children: [ {
+                type: 'CONTENT',
+                value: 'one'
+            }]
+        }, expect.inspect, expect.diff);
+
+        expect(pen.toString(), 'to equal',
+            '<div id="very-long-attribute-value" data-value1="very-long-attribute-value"\n' +
+                '   data-value2="very-long-attribute-value">\n' +
+            '  one\n' +
+            '</div>');
+    });
+
     it('forces the children onto multiple lines when attributes are on multiple lines', () => {
 
         Painter(pen, {

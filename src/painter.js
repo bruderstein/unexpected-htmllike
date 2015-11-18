@@ -186,11 +186,16 @@ function outputElement(pen, description, inspect, diffFn) {
 
     let needSpaceBeforeSelfClose = true;
     let forceChildrenOnNewLine = false;
+    let needNewLineBeforeClose = false;
     if (description.attributes) {
-        const penSize = outputAttributes(pen, description.attributes, inspect, diffFn);
-        if (penSize.height > 1) {
+        const attributeResult = outputAttributes(pen, description.attributes, inspect, diffFn);
+
+        if (attributeResult.size.height > 1) {
             needSpaceBeforeSelfClose = false;
             forceChildrenOnNewLine = true;
+            if (!attributeResult.breakAfter) {
+                needNewLineBeforeClose = true;
+            }
         }
     }
 
@@ -198,6 +203,10 @@ function outputElement(pen, description, inspect, diffFn) {
     if (!description.children || description.children.length === 0) {
         if (needSpaceBeforeSelfClose) {
             pen.sp();
+        }
+
+        if (needNewLineBeforeClose) {
+            pen.nl().i();
         }
         pen.prismPunctuation('/>');
     } else {
@@ -352,7 +361,10 @@ function outputAttributes(pen, attributes, inspect, diffFn) {
         });
     });
 
-    const attribPen = attribOutput.getOutput({ groupContent: true, appendBreakIfHadBreaks: true }).output;
-    pen.append(attribPen);
-    return attribPen.size();
+    const attribResult = attribOutput.getOutput({ groupContent: true, appendBreakIfHadBreaks: false });
+    pen.append(attribResult.output);
+    return {
+        size: attribResult.output.size(),
+        breakAfter: attribResult.breakAfter
+    };
 }

@@ -303,8 +303,7 @@ describe('HtmlLikeComponent', () => {
             children: ['some content']
         }, 'to inspect as',
             '<div id="foo" className="bar blah mcgar" data-role="special-long-button"\n' +
-            '   data-special="some other long attrib"\n' +
-            '>\n' +
+            '   data-special="some other long attrib">\n' +
             '  some content\n' +
             '</div>');
     });
