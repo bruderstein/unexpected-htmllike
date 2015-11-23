@@ -1,4 +1,5 @@
 import ArrayChangesAsync from 'array-changes-async';
+import ArrayChanges from 'array-changes';
 import ObjectAssign from 'object-assign';
 import isNativeType from './isNativeType';
 import convertToDiff from './convertToDiff';
@@ -110,37 +111,52 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
     const promises = [];
 
     if (expectedIsNative && typeof expected === 'function' && expected._expectIt) {
-        const withErrorResult = expect.withError(() => expected(actual), e => {
+        let result;
+        diffResult.type = 'CONTENT';
+        diffResult.value = actual;
+        try {
+            result = expected(actual);
+        } catch (e) {
 
-            diffResult.type = 'CONTENT';
-            diffResult.value = actual;
             diffResult.diff = {
                 type: 'custom',
                 assertion: expected,
                 error: e
             };
             weights.add(options.weights.STRING_CONTENT_MISMATCH);
-            return {
+            return expect.promise.resolve({
                 diff: diffResult,
                 weight: weights
-            };
-        }).then(() => {
-
-            diffResult.type = 'CONTENT';
-            diffResult.value = actual;
-            // Assertion passed
-            return {
-                diff: diffResult,
-                weight: weights
-            };
-        });
-
-        if (withErrorResult) {
-            return withErrorResult;
+            });
         }
 
-        return expect.promise.resolve({ diffResult, weights });
+        if (result && result.isPending()) {
+           return result.then(() => {
+               return {
+                   diff: diffResult,
+                   weight: weights
+               };
+           }).catch(e => {
+               diffResult.type = 'CONTENT';
+               diffResult.value = actual;
+               diffResult.diff = {
+                   type: 'custom',
+                   assertion: expected,
+                   error: e
+               };
+               weights.add(options.weights.STRING_CONTENT_MISMATCH);
+               return {
+                   diff: diffResult,
+                   weight: weights
+               };
+           });
+        }
 
+        // Assertion passed
+        return expect.promise.resolve({
+            diff: diffResult,
+            weight: weights
+        });
     }
 
     if (actualIsNative && expectedIsNative) {
@@ -414,7 +430,7 @@ function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedCh
             // don't match to be "similar".
             if (exactDiffResult.weight.real !== 0 && exactDiffResult.insertCount && exactDiffResult.removeCount) {
                 onlyExact = false;
-                return tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExact);
+                return tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExact, exactDiffResult.isAsync);
             }
             return null;
 
@@ -428,15 +444,75 @@ function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedCh
         });
 }
 
-function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExactMatches) {
+function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExactMatches, isAsync) {
 
-    let diffWeights = new Weights();
-    const diffResult = [];
 
-    let insertCount = 0;
-    let removeCount = 0;
-    let changeCount = 0;
-    const promises = [];
+    if (!isAsync) {
+        const syncResult = syncChildrenDiff(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExactMatches);
+        if (!syncResult.isAsync) {
+            return expect.promise.resolve(processChildrenChanges(syncResult.changes, actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options));
+        }
+    }
+
+    return asyncChildrenDiff(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExactMatches)
+        .then(changes => processChildrenChanges(changes, actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options))
+        .then(result => {
+            result.isAsync = true;
+            return result;
+        });
+}
+
+
+function syncChildrenDiff(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExactMatches) {
+
+    let isAsync = false;
+    const changes = ArrayChanges(actualChildren, expectedChildren,
+        function (a, b, aIndex, bIndex) {
+                const diffPromise = diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options);
+
+                if (diffPromise.isPending()) {
+                    isAsync = true;
+                    return true;    // We could throw something here
+                } else {
+                    const diffResult = diffPromise.value();
+                    return diffResult.weight === DefaultWeights.OK;
+                }
+        },
+
+        function (a, b, aIndex, bIndex) {
+
+
+            if (onlyExactMatches) {
+                return false;
+            }
+            var aIsNativeType = isNativeType(a);
+            var bIsNativeType = isNativeType(b);
+
+            // If they're native types, assume they're similar
+            if (aIsNativeType && bIsNativeType) {
+                return true;
+            }
+
+            // If one is an element, then don't count them as "similar"
+            if (aIsNativeType !== bIsNativeType) {
+                return false;
+            }
+
+            // Here we could diff and get a weight, but the weight as to what is similar is dependant on
+            // what the other "similar" elements got, so we'll just take a simplistic view -
+            // elements with the same name are similar, otherwise they're not
+            return actualAdapter.getName(a) === expectedAdapter.getName(b);
+        });
+
+    return {
+        isAsync,
+        changes
+    };
+
+}
+
+
+function asyncChildrenDiff(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExactMatches) {
 
     return expect.promise((resolve, reject) => {
         ArrayChangesAsync(actualChildren, expectedChildren,
@@ -469,85 +545,106 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
                 // elements with the same name are similar, otherwise they're not
                 return callback(actualAdapter.getName(a) === expectedAdapter.getName(b));
             }, function (changes) {
-
-                changes.forEach(diffItem => {
-
-                    let itemResult;
-
-                    switch(diffItem.type) {
-                        case 'insert':
-                            insertCount++;
-                            itemResult = convertToDiff(expectedAdapter, diffItem.value);
-                            if (options.diffMissingChildren) {
-                                diffWeights.add(options.weights.CHILD_MISSING);
-                                itemResult.diff = {
-                                    type: 'missing'
-                                };
-                                diffResult.push(itemResult);
-                            }
-                            break;
-
-                        case 'remove':
-                            removeCount++;
-                            itemResult = convertToDiff(actualAdapter, diffItem.value);
-
-                            if (options.diffExtraChildren) {
-                                itemResult.diff = {
-                                    type: 'extra'
-                                };
-                                diffWeights.addReal(options.weights.CHILD_INSERTED);
-                            }
-                            diffWeights.addTotal(options.weights.CHILD_INSERTED);
-                            diffResult.push(itemResult);
-                            break;
-
-                        case 'similar':
-                            changeCount++;
-                        // fallthrough
-                        // (equal needs to be diffed, because it may contain wrappers, hence we need to work that out.. again)
-                        // It would be good to cache that, from the diff above.
-
-                        case 'equal': //eslint-disable-line no-fallthrough
-                        default:
-                            const index = diffResult.length;
-
-                            diffResult.push({}); // Push a placeholder, we'll replace when the promise resolves
-                            const promise = diffElementOrWrapper(actualAdapter, expectedAdapter, diffItem.value, diffItem.expected, expect, options)
-                                .then(result => {
-                                    diffResult[index] = result.diff;
-                                    diffWeights.addWeight(result.weight);
-                                });
-                            promises.push(promise);
-
-                            break;
-                    }
-
-                });
-
-                if (promises.length) {
-                    return expect.promise.all(promises).then(() => {
-                        resolve();
-                    });
-                }
-                return resolve();
+                resolve(changes);
             });
-
-    }).then(() => {
-
-        if (actualChildren.length === 0 && expectedChildren.length !== 0 && options.diffMissingChildren) {
-            diffWeights.add(options.weights.ALL_CHILDREN_MISSING);
-        }
-
-        return {
-            weight: diffWeights,
-            diff: diffResult,
-            insertCount,
-            removeCount,
-            changeCount
-        };
     });
 }
 
+
+function processChildrenChanges(changes, actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options) {
+
+    let diffWeights = new Weights();
+    const diffResult = [];
+
+    let insertCount = 0;
+    let removeCount = 0;
+    let changeCount = 0;
+    const promises = [];
+
+    return expect.promise(function (resolve, reject) {
+            changes.forEach(diffItem => {
+
+                let itemResult;
+
+                switch(diffItem.type) {
+                    case 'insert':
+                        insertCount++;
+                        itemResult = convertToDiff(expectedAdapter, diffItem.value);
+                        if (options.diffMissingChildren) {
+                            diffWeights.add(options.weights.CHILD_MISSING);
+                            itemResult.diff = {
+                                type: 'missing'
+                            };
+                            diffResult.push(itemResult);
+                        }
+                        break;
+
+                    case 'remove':
+                        removeCount++;
+                        itemResult = convertToDiff(actualAdapter, diffItem.value);
+
+                        if (options.diffExtraChildren) {
+                            itemResult.diff = {
+                                type: 'extra'
+                            };
+                            diffWeights.addReal(options.weights.CHILD_INSERTED);
+                        }
+                        diffWeights.addTotal(options.weights.CHILD_INSERTED);
+                        diffResult.push(itemResult);
+                        break;
+
+                    case 'similar':
+                        changeCount++;
+                    // fallthrough
+                    // (equal needs to be diffed, because it may contain wrappers, hence we need to work that out.. again)
+                    // It would be good to cache that, from the diff above.
+
+                    case 'equal': //eslint-disable-line no-fallthrough
+                    default:
+                        const index = diffResult.length;
+
+                        diffResult.push({}); // Push a placeholder, we'll replace when the promise resolves
+                        const promise = diffElementOrWrapper(actualAdapter, expectedAdapter, diffItem.value, diffItem.expected, expect, options)
+                        if (promise.isPending()) {
+                            promises.push(
+                                promise
+                                    .then(result => {
+                                        diffResult[index] = result.diff;
+                                        diffWeights.addWeight(result.weight);
+                                    })
+                            );
+                        } else {
+                            const result = promise.value();
+                            diffResult[index] = result.diff;
+                            diffWeights.addWeight(result.weight);
+                        }
+
+                        break;
+                }
+
+            });
+
+            if (promises.length) {
+                return expect.promise.all(promises).then(resolve);
+            }
+            return resolve();
+        })
+
+        .then(() => {
+
+            if (actualChildren.length === 0 && expectedChildren.length !== 0 && options.diffMissingChildren) {
+                diffWeights.add(options.weights.ALL_CHILDREN_MISSING);
+            }
+
+            return {
+                weight: diffWeights,
+                diff: diffResult,
+                insertCount,
+                removeCount,
+                changeCount
+            };
+        });
+}
 export default {
     DefaultWeights,
     diffElements
