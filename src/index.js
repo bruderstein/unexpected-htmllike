@@ -16,7 +16,9 @@ function getDiff(actualAdapter) {
 
     return function (expectedAdapter, actual, expected, output, expect, options) {
 
-        return diff.diffElements(actualAdapter, expectedAdapter, actual, expected, expect, options).then(diffResult => {
+        const result = diff.diffElements(actualAdapter, expectedAdapter, actual, expected, expect, options);
+
+        const outputResult = function (diffResult, expect) {
 
             const pen = output.clone();
             Painter(pen, diffResult.diff, expect.inspect.bind(expect), expect.diff.bind(expect));
@@ -26,9 +28,19 @@ function getDiff(actualAdapter) {
                 diff: diffResult.diff,
                 weight: diffResult.weight
             };
+        };
 
-        });
+        if (result && typeof result.then === 'function') {
+            // Result was a promise, must have been async
 
+            return result.then(diffResult => {
+                const paintedOutput = outputResult(diffResult, expect);
+                return paintedOutput;
+            });
+        }
+
+        // Returned result directly, hence everything was doable sync
+        return outputResult(result, expect);
     };
 }
 
@@ -36,16 +48,20 @@ function getContains(actualAdapter) {
 
     return function (expectedAdapter, actual, expected, output, expect, options) {
 
-        return Contains(actualAdapter, expectedAdapter, actual, expected, expect, options).then(result => {
+        const result = Contains(actualAdapter, expectedAdapter, actual, expected, expect, options);
 
-            if (result.bestMatch) {
+        const convertOutput = containsResult => {
+            if (containsResult.bestMatch) {
                 const pen = output.clone();
-                Painter(pen, result.bestMatch.diff, expect.inspect.bind(expect), expect.diff.bind(expect));
-                result.bestMatch.output = pen;
+                Painter(pen, containsResult.bestMatch.diff, expect.inspect.bind(expect), expect.diff.bind(expect));
+                containsResult.bestMatch.output = pen;
             }
-            return result;
-        });
-
+            return containsResult;
+        };
+        if (result && typeof result.then === 'function') {
+            return result.then(containsResult => convertOutput(containsResult));
+        }
+        return convertOutput(result);
     };
 }
 

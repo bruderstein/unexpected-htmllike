@@ -31,19 +31,24 @@ expect.addType({
     }
 });
 
+function shiftResultOrPromise(resultOrPromise, expect) {
+    if (resultOrPromise && typeof resultOrPromise.then === 'function') {
+        return resultOrPromise.then(result => expect.shift(result));
+    }
+    expect.shift(resultOrPromise);
+}
+
 expect.addAssertion('<TestHtmlElement> when checked to contain <TestHtmlElement> <assertion>', function (expect, subject, value) {
 
-    return Contains(TestActualAdapter, TestExpectedAdapter, subject, value, expect, {}).then(result => {
-        expect.shift(result);
-    });
+    const containsResult = Contains(TestActualAdapter, TestExpectedAdapter, subject, value, expect, {});
+    return shiftResultOrPromise(containsResult, expect);
 });
 
 
 expect.addAssertion('<TestHtmlElement> when checked with options to contain <object> <TestHtmlElement> <assertion>', function (expect, subject, options, value) {
 
-    return Contains(TestActualAdapter, TestExpectedAdapter, subject, value, expect, options).then(result => {
-        expect.shift(result);
-    });
+    const containsResult = Contains(TestActualAdapter, TestExpectedAdapter, subject, value, expect, options);
+    return shiftResultOrPromise(containsResult, expect);
 });
 
 describe('contains', () => {

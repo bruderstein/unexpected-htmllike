@@ -39,6 +39,15 @@ expect.addType({
     }
 });
 
+function shiftResultOrPromise(resultOrPromise, expect) {
+    if (resultOrPromise && typeof resultOrPromise.then === 'function') {
+        return resultOrPromise.then(result => {
+            return expect.shift(result);
+        });
+    }
+    return expect.shift(resultOrPromise);
+}
+
 expect.addAssertion('<any> to inspect as <string>', (expect, subject, value) => {
     expect(expect.inspect(subject).toString(), 'to equal', value);
 });
@@ -47,21 +56,18 @@ expect.addAssertion('<TestHtmlLike> when diffed against <TestHtmlLike> <assertio
 
     const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
     const pen = expect.output.clone();
-    return htmlLikeUnexpected.diff(TestExpectedAdapter, subject, value, pen, expect).then(result => {
-
-        return expect.shift(result);
-    });
+    const promiseOrResult = htmlLikeUnexpected.diff(TestExpectedAdapter, subject, value, pen, expect);
+    return shiftResultOrPromise(promiseOrResult, expect);
 });
+
 
 expect.addAssertion('<TestHtmlLike> when diffed with options against <object> <TestHtmlLike> <assertion>', (expect, subject, options, value) => {
 
     const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
     const pen = expect.output.clone();
 
-    return htmlLikeUnexpected.diff(TestExpectedAdapter, subject, value, pen, expect, options).then(result => {
-
-        return expect.shift(result);
-    });
+    const promiseOrResult = htmlLikeUnexpected.diff(TestExpectedAdapter, subject, value, pen, expect, options);
+    return shiftResultOrPromise(promiseOrResult, expect);
 });
 
 expect.addType({
@@ -122,16 +128,14 @@ expect.addAssertion('<HtmlDiffResult> to output with weight <string> <number>', 
 
 expect.addAssertion('<TestHtmlLike> when checked to contain <TestHtmlLike> <assertion>', (expect, subject, value) => {
     const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
-    return htmlLikeUnexpected.contains(TestExpectedAdapter, subject, value, expect.output, expect, null).then(result => {
-        expect.shift(result);
-    });
+    const resultOrPromise = htmlLikeUnexpected.contains(TestExpectedAdapter, subject, value, expect.output, expect, null);
+    return shiftResultOrPromise(resultOrPromise, expect);
 });
 
 expect.addAssertion('<TestHtmlLike> when checked with options to contain <object> <TestHtmlLike> <assertion>', (expect, subject, options, value) => {
     const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
-    return htmlLikeUnexpected.contains(TestExpectedAdapter, subject, value, expect.output, expect, options).then(result => {
-        expect.shift(result);
-    });
+    const resultOrPromise = htmlLikeUnexpected.contains(TestExpectedAdapter, subject, value, expect.output, expect, options);
+    return shiftResultOrPromise(resultOrPromise, expect);
 });
 
 expect.addType({
@@ -347,7 +351,7 @@ describe('HtmlLikeComponent', () => {
 
         });
 
-        it('outputs the diff of a single component with a different attribute and a matching attribute after', () => {
+        it.only('outputs the diff of a single component with a different attribute and a matching attribute after', () => {
 
             return expect(createActual({
                 name: 'div', attribs: { id: 'foo', className: 'testing' }, children: []
@@ -1263,7 +1267,7 @@ describe('HtmlLikeComponent', () => {
             );
         });
 
-        it('outputs the output from an asynchronous expect.it content assertion that fails', () => {
+        it.only('outputs the output from an asynchronous expect.it content assertion that fails', () => {
 
             return expect(
                 createActual({ name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }),

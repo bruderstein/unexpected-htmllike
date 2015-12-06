@@ -18,6 +18,16 @@ function getDiff(actual, expected, options) {
     return Diff.diffElements(TestActualAdapter, TestExpectedAdapter, actual, expected, expect, options);
 }
 
+function shiftResultOrPromise(resultOrPromise, expect) {
+    if (resultOrPromise && typeof resultOrPromise.then === 'function') {
+        return resultOrPromise.then(result => {
+            return expect.shift(result);
+        });
+    }
+    return expect.shift(resultOrPromise);
+
+}
+
 expect.addType({
     name: 'TestHtmlElement',
     identify: function (value) {
@@ -30,16 +40,12 @@ expect.addType({
 
 expect.addAssertion('<string|TestHtmlElement> when diffed against <string|TestHtmlElement> <assertion>', function (expect, subject, value) {
 
-    return getDiff(subject, value, {}).then(diff => {
-        expect.shift(diff);
-    });
+    return shiftResultOrPromise(getDiff(subject, value, {}), expect);
 });
 
 expect.addAssertion('<TestHtmlElement|string> when diffed with options against <object> <TestHtmlElement|string> <assertion>', function (expect, subject, options, value) {
 
-    return getDiff(subject, value, options).then(diff => {
-        expect.shift(diff);
-    });
+    return shiftResultOrPromise(getDiff(subject, value, options), expect);
 });
 
 
