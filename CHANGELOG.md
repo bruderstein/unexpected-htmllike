@@ -15,3 +15,7 @@ letting children that are the same element be similar, and then we take the resu
 
 ### v0.3.1
 * Minor improvements to display of elements with children with attributes that need more than one line
+
+### v0.3.2
+*  Fix bug with children being non-exact whilst ignoring the bits that aren't exact. e.g. you ignore extra attributes,
+and have an extra attribute on a child, a `contains` check would not find the element.
