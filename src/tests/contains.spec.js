@@ -245,4 +245,39 @@ describe('contains', () => {
             }
         });
     });
+
+    it('finds a nested component with missing children and extra attribute', () => {
+        return expect({
+            name: 'div', attribs: {}, children: [
+                {
+                    name: 'span',
+                    attribs: {},
+                    children: [ 'one' ]
+                },
+                {
+                    name: 'span',
+                    attribs: { className: 'dummy' },
+                    children: [ 'two' ]
+                },
+                {
+                    name: 'span',
+                    attribs: {},
+                    children: [ 'three' ]
+                }
+            ]
+        }, 'when checked with options to contain', { diffExtraChildren: false, diffExtraAttributes: false }, {
+            name: 'div', attribs: {}, children: [
+                {
+                    name: 'span',
+                    attribs: {},
+                    children: [ 'two' ]
+                }
+            ]
+        }, 'to satisfy', {
+            found: true,
+            bestMatch: {
+                weight: 0
+            }
+        });
+    });
 });

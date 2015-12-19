@@ -442,7 +442,7 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
         ArrayChangesAsync(actualChildren, expectedChildren,
             function (a, b, aIndex, bIndex, callback) {
                 diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options).then(elementDiff => {
-                    return callback(elementDiff.weight.total === WEIGHT_OK);
+                    return callback(elementDiff.weight.real === WEIGHT_OK);
                 });
             },
 
