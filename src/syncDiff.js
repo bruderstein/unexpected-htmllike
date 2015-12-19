@@ -31,33 +31,10 @@ function diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, 
         if (actualChildren.length === 1) {
             // Try as wrapper
             const wrapperResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actualChildren[0], expected, expect, options)
-
-            const wrapperWeight = options.diffWrappers ? options.weights.WRAPPER_REMOVED : DiffCommon.WEIGHT_OK;
-            if ((wrapperWeight + wrapperResult.weight.real) < diffResult.weight.real) {
-                // It is (better as) a wrapper.
-                diffResult = {
-                    diff: convertToDiff(actualAdapter, actual, { includeChildren: false }),
-                    weight: wrapperResult.weight.addTotal(options.weights.WRAPPER_REMOVED)
-                };
-                if (options.diffWrappers) {
-                    diffResult.diff.diff = {
-                        type: 'wrapper'
-                    };
-                    diffResult.weight.addReal(options.weights.WRAPPER_REMOVED);
-                } else {
-                    diffResult.diff.type = 'WRAPPERELEMENT';
-                }
-
-                diffResult.diff.children = [wrapperResult.diff];
-            }
-            return diffResult;
+            return DiffCommon.checkElementWrapperResult(actualAdapter, actual, diffResult, wrapperResult, options);
         }
-
     }
-
-
     return diffResult;
-
 }
 
 
@@ -104,20 +81,7 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
 
     if (actualIsNative && expectedIsNative) {
 
-        diffResult.type = 'CONTENT';
-        diffResult.value = actual;
-
-        if (actual !== expected) {
-            diffResult.diff = {
-                type: 'changed',
-                expectedValue: expected
-            };
-            if ('' + actual !== '' + expected) {
-                weights.add(options.weights.STRING_CONTENT_MISMATCH);
-            } else {
-                weights.add(options.weights.CONTENT_TYPE_MISMATCH);
-            }
-        }
+        diffResult = DiffCommon.getNativeContentResult(actual, expected, weights, options);
 
         return {
             diff: diffResult,
@@ -126,13 +90,7 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
     }
 
     if (actualIsNative && !expectedIsNative) {
-        weights.add(options.weights.NATIVE_NONNATIVE_MISMATCH);
-        diffResult.type = 'CONTENT';
-        diffResult.value = actual;
-        diffResult.diff = {
-            type: 'contentElementMismatch',
-            expected: convertToDiff(expectedAdapter, expected)
-        };
+        diffResult = DiffCommon.getNativeNonNativeResult(actual, expected, weights, expectedAdapter, options);
 
         return {
             diff: diffResult,
@@ -141,12 +99,7 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
     }
 
     if (!actualIsNative && expectedIsNative) {
-        weights.add(options.weights.NATIVE_NONNATIVE_MISMATCH);
-        diffResult = convertToDiff(actualAdapter, actual);
-        diffResult.diff = {
-            type: 'elementContentMismatch',
-            expected: convertToDiff(expectedAdapter, expected)
-        };
+        diffResult = DiffCommon.getNonNativeNativeResult(actual, expected, weights, actualAdapter, expectedAdapter, options);
 
         return {
             diff: diffResult,
@@ -157,19 +110,9 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
     const actualName = actualAdapter.getName(actual);
     const expectedName = expectedAdapter.getName(expected);
 
+    diffResult = DiffCommon.getElementResult(actualName, expectedName, weights, options);
 
-    diffResult.type = 'ELEMENT';
-    diffResult.name = actualName;
-
-    if (actualName !== expectedName) {
-        diffResult.diff = {
-            type: 'differentElement',
-            expectedName: expectedName
-        };
-        weights.add(options.weights.NAME_MISMATCH);
-    }
-
-    const attributesResult = diffAttributes(actualAdapter.getAttributes(actual), expectedAdapter.getAttributes(expected), expect, options);
+    const attributesResult = DiffCommon.diffAttributes(actualAdapter.getAttributes(actual), expectedAdapter.getAttributes(expected), expect, attributeExpectItHandler, options);
     diffResult.attributes = attributesResult.diff;
     weights.addWeight(attributesResult.weight);
 
@@ -185,81 +128,26 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
 
 }
 
-function diffAttributes(actualAttributes, expectedAttributes, expect, options) {
+function attributeExpectItHandler(assertion, actualValue, attribResult, weights, options) {
 
-    let diffWeights = new Weights();
-    const diffResult = [];
+    let expectItResult;
+    try {
+        expectItResult = assertion(actualValue);
+    } catch (e) {
 
-    Object.keys(actualAttributes).forEach(attrib => {
+        attribResult.diff = {
+            type: 'custom',
+            assertion: assertion,
+            error: e
+        };
 
-        const attribResult = { name: attrib, value: actualAttributes[attrib] };
-        diffResult.push(attribResult);
+        weights.add(options.weights.ATTRIBUTE_MISMATCH);
+    }
 
-        if (expectedAttributes.hasOwnProperty(attrib)) {
-            const expectedAttrib = expectedAttributes[attrib];
-            if (typeof expectedAttrib === 'function' && expectedAttrib._expectIt) {
-                // This is an assertion in the form of expect.it(...)
-
-                let expectItResult;
-                try {
-                    expectItResult = expectedAttrib(actualAttributes[attrib]);
-                } catch (e) {
-
-                    attribResult.diff = {
-                        type: 'custom',
-                        assertion: expectedAttrib,
-                        error: e
-                    };
-
-                    diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
-                }
-
-                if (expectItResult && typeof expectItResult.then === 'function') {
-                    expectItResult.then(() => {}, () => {});
-                    throw new RequiresAsyncError();
-                }
-
-            } else if (!expect.equal(actualAttributes[attrib], expectedAttributes[attrib])) {
-                diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
-                attribResult.diff = {
-                    type: 'changed',
-                    expectedValue: expectedAttributes[attrib]
-                };
-            }
-        } else {
-            if (options.diffExtraAttributes) {
-                diffWeights.addReal(options.weights.ATTRIBUTE_EXTRA);
-                attribResult.diff = {
-                    type: 'extra'
-                };
-            }
-
-            diffWeights.addTotal(options.weights.ATTRIBUTE_EXTRA);
-        }
-    });
-
-    Object.keys(expectedAttributes).forEach(attrib => {
-
-        if (!actualAttributes.hasOwnProperty(attrib)) {
-            if (options.diffRemovedAttributes) {
-                diffWeights.addReal(options.weights.ATTRIBUTE_MISSING);
-                const attribResult = {
-                    name: attrib,
-                    diff: {
-                        type: 'missing',
-                        expectedValue: expectedAttributes[attrib]
-                    }
-                };
-                diffResult.push(attribResult);
-            }
-            diffWeights.addTotal(options.weights.ATTRIBUTE_MISSING);
-        }
-    });
-
-    return {
-        diff: diffResult,
-        weight: diffWeights
-    };
+    if (expectItResult && typeof expectItResult.then === 'function') {
+        expectItResult.then(() => {}, () => {});
+        throw new RequiresAsyncError();
+    }
 }
 
 function getClassDiff(actualClasses, expectedClasses, diffResult, weights, options) {
