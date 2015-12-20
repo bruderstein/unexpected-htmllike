@@ -11,7 +11,9 @@ const TestAdapter = {
 
     getChildren(comp) {
         return (comp.children && [].concat([], comp.children)) || [];
-    }
+    },
+
+    classAttributeName: 'className'
 };
 
 function getDiff(actual, expected, options) {
@@ -1207,6 +1209,260 @@ describe('diff', () => {
                 },
                 weight: Diff.DefaultWeights.OK
             });
+        });
+    });
+
+    describe('class comparisons', () => {
+
+        it('matches a className with diffExactClasses:true', () => {
+
+            return expect({
+                type: 'ELEMENT',
+                name:'SomeElement',
+                attribs: { className: 'one three two' },
+                children: []
+            }, 'when diffed with options against', { diffExactClasses: true },
+                {
+                type: 'ELEMENT',
+                name:'SomeElement',
+                attribs: { className: 'one two three' },
+                children: []
+            },
+            'to satisfy', {
+                    diff: {
+                        type: 'ELEMENT',
+                        attributes: [
+                            {
+                                name: 'className',
+                                diff: {
+                                    type: 'changed',
+                                    expectedValue: 'one two three'
+                                }
+                            }
+                        ]
+                    }
+                });
+        });
+
+        describe('with diffExactClasses:false', () => {
+
+            it('ignores className order', () => {
+
+                return expect({
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'one three two' },
+                        children: []
+                    }, 'when diffed with options against', { diffExactClasses: false },
+                    {
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'one two three' },
+                        children: []
+                    },
+                    'to satisfy', {
+                        diff: {
+                            type: 'ELEMENT',
+                            attributes: [
+                                {
+                                    name: 'className',
+                                    value: 'one three two',
+                                    diff: undefined
+                                }
+                            ]
+                        },
+                        weight: Diff.DefaultWeights.OK
+                    });
+            });
+
+            it('identifies an extra class', () => {
+
+                return expect({
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'one three two' },
+                        children: []
+                    }, 'when diffed with options against', { diffExactClasses: false },
+                    {
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'two one' },
+                        children: []
+                    },
+                    'to satisfy', {
+                        diff: {
+                            type: 'ELEMENT',
+                            attributes: [
+                                {
+                                    name: 'className',
+                                    value: 'one three two',
+                                    diff: {
+                                        type: 'class',
+                                        extra: 'three'
+                                    }
+                                }
+                            ]
+                        },
+                        weight: Diff.DefaultWeights.ATTRIBUTE_MISMATCH
+                    });
+            });
+
+            it('identifies a missing class', () => {
+
+                return expect({
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'one two' },
+                        children: []
+                    }, 'when diffed with options against', { diffExactClasses: false },
+                    {
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'three two one' },
+                        children: []
+                    },
+                    'to satisfy', {
+                        diff: {
+                            type: 'ELEMENT',
+                            attributes: [
+                                {
+                                    name: 'className',
+                                    value: 'one two',
+                                    diff: {
+                                        type: 'class',
+                                        missing: 'three'
+                                    }
+                                }
+                            ]
+                        },
+                        weight: Diff.DefaultWeights.ATTRIBUTE_MISMATCH
+                    });
+            });
+
+            it('ignores extra spaces in the class list', () => {
+
+                return expect({
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: ' one two  ' },
+                        children: []
+                    }, 'when diffed with options against', { diffExactClasses: false },
+                    {
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'three two one' },
+                        children: []
+                    },
+                    'to satisfy', {
+                        diff: {
+                            type: 'ELEMENT',
+                            attributes: [
+                                {
+                                    name: 'className',
+                                    value: ' one two  ',
+                                    diff: {
+                                        type: 'class',
+                                        missing: 'three',
+                                        extra: undefined
+                                    }
+                                }
+                            ]
+                        },
+                        weight: Diff.DefaultWeights.ATTRIBUTE_MISMATCH
+                    });
+            });
+
+            it('identifies a different class name', () => {
+
+                return expect({
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'one cheese two' },
+                        children: []
+                    }, 'when diffed with options against', { diffExactClasses: false },
+                    {
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'three two one' },
+                        children: []
+                    },
+                    'to satisfy', {
+                        diff: {
+                            type: 'ELEMENT',
+                            attributes: [
+                                {
+                                    name: 'className',
+                                    value: 'one cheese two',
+                                    diff: {
+                                        type: 'class',
+                                        missing: 'three',
+                                        extra: 'cheese'
+                                    }
+                                }
+                            ]
+                        },
+                        weight: Diff.DefaultWeights.ATTRIBUTE_MISMATCH
+                    });
+            });
+
+            it('ignores an extra class when diffExtraClasses is false', () => {
+
+                return expect({
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'one three two' },
+                        children: []
+                    }, 'when diffed with options against', { diffExactClasses: false, diffExtraClasses: false },
+                    {
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'two one' },
+                        children: []
+                    },
+                    'to satisfy', {
+                        diff: {
+                            type: 'ELEMENT',
+                            attributes: [
+                                {
+                                    name: 'className',
+                                    value: 'one three two',
+                                    diff: undefined
+                                }
+                            ]
+                        },
+                        weight: Diff.DefaultWeights.OK
+                    });
+            });
+
+            it('ignores a missing class when diffMissingClasses is false', () => {
+
+                return expect({
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'one two' },
+                        children: []
+                    }, 'when diffed with options against', { diffExactClasses: false, diffMissingClasses: false },
+                    {
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'three two one' },
+                        children: []
+                    },
+                    'to satisfy', {
+                        diff: {
+                            type: 'ELEMENT',
+                            attributes: [
+                                {
+                                    name: 'className',
+                                    value: 'one two',
+                                    diff: undefined
+                                }
+                            ]
+                        },
+                        weight: Diff.DefaultWeights.OK
+                    });
+            });
+
         });
     });
 

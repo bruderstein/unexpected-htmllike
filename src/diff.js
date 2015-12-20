@@ -1,4 +1,5 @@
 import ArrayChangesAsync from 'array-changes-async';
+import ArrayChanges from 'array-changes';
 import ObjectAssign from 'object-assign';
 import isNativeType from './isNativeType';
 import convertToDiff from './convertToDiff';
@@ -33,7 +34,10 @@ const defaultOptions = {
     diffRemovedAttributes: true,
     diffExtraChildren: true,
     diffMissingChildren: true,
-    diffWrappers: true
+    diffWrappers: true,
+    diffExactClasses: true,
+    diffMissingClasses: true,
+    diffExtraClasses: true
 };
 
 const WEIGHT_OK = 0;
@@ -42,6 +46,14 @@ function diffElements(actualAdapter, expectedAdapter, actual, expected, expect, 
 
     options = ObjectAssign({}, defaultOptions, options);
     options.weights = ObjectAssign({}, DefaultWeights, options.weights);
+
+    // If the expected and actual adapters use the same name for the class attribute, we can diff the classes
+    // We set this by setting the classAttributeName in the options
+    if (actualAdapter.classAttributeName &&
+        expectedAdapter.classAttributeName &&
+        actualAdapter.classAttributeName === expectedAdapter.classAttributeName) {
+        options.classAttributeName = actualAdapter.classAttributeName;
+    }
 
     return diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, options)
         .then(diffResult => {
@@ -272,11 +284,17 @@ function diffAttributes(actualAttributes, expectedAttributes, expect, options) {
                 promises.push(withErrorResult);
 
             } else if (!expect.equal(actualAttributes[attrib], expectedAttributes[attrib])) {
-                diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
-                attribResult.diff = {
-                    type: 'changed',
-                    expectedValue: expectedAttributes[attrib]
-                };
+
+                if (!options.diffExactClasses && options.classAttributeName === attrib) {
+                    // Special handling for classes
+                    getClassDiff(actualAttributes[attrib], expectedAttributes[attrib], attribResult, diffWeights, options);
+                } else {
+                    diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
+                    attribResult.diff = {
+                        type: 'changed',
+                        expectedValue: expectedAttributes[attrib]
+                    };
+                }
             }
         } else {
             if (options.diffExtraAttributes) {
@@ -324,8 +342,52 @@ function diffAttributes(actualAttributes, expectedAttributes, expect, options) {
             });
         });
     }
+}
 
+function getClassDiff(actualClasses, expectedClasses, diffResult, weights, options) {
 
+    expectedClasses = (expectedClasses || '').split(' ').filter(c => c).sort();
+    actualClasses = (actualClasses || '').split(' ').filter(c => c).sort();
+
+    const changes = ArrayChanges(actualClasses, expectedClasses, (a, b) => a === b, () => false);
+    const missingClasses = [];
+    const extraClasses = [];
+
+    for(let changeIndex = 0; changeIndex < changes.length; ++changeIndex) {
+
+        const change = changes[changeIndex];
+
+        switch(change.type) {
+            case 'insert':
+                missingClasses.push(change.value);
+                break;
+
+            case 'remove':
+                extraClasses.push(change.value);
+                break;
+
+        }
+    }
+
+    let attributeDiff;
+    if (options.diffExtraClasses && extraClasses.length) {
+        attributeDiff = {};
+        attributeDiff.extra = extraClasses.join(' ');
+    }
+
+    if (options.diffMissingClasses && missingClasses.length) {
+        attributeDiff = attributeDiff || {};
+        attributeDiff.missing = missingClasses.join(' ');
+    }
+
+    if (attributeDiff) {
+        attributeDiff.type = 'class';
+        diffResult.diff = attributeDiff;
+        // Not sure what the best to do with the weights is
+        // - we might need to have some different weights for class mismatches
+        // Only real-world examples will help show what needs to be done here
+        weights.add(options.weights.ATTRIBUTE_MISMATCH);
+    }
 }
 
 function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, options) {
