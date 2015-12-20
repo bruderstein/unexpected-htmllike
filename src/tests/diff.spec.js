@@ -1405,6 +1405,41 @@ describe('diff', () => {
                     });
             });
 
+
+            it('identifies a single different class name', () => {
+
+                return expect({
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'foo' },
+                        children: []
+                    }, 'when diffed with options against', { diffExactClasses: false },
+                    {
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'foob' },
+                        children: []
+                    },
+                    'to satisfy', {
+                        diff: {
+                            type: 'ELEMENT',
+                            attributes: [
+                                {
+                                    name: 'className',
+                                    value: 'foo',
+                                    diff: {
+                                        type: 'class',
+                                        missing: 'foob',
+                                        extra: 'foo'
+                                    }
+                                }
+                            ]
+                        },
+                        weight: Diff.DefaultWeights.ATTRIBUTE_MISMATCH
+                    });
+            });
+
+
             it('ignores an extra class when diffExtraClasses is false', () => {
 
                 return expect({

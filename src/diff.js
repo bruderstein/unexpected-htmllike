@@ -366,6 +366,13 @@ function getClassDiff(actualClasses, expectedClasses, diffResult, weights, optio
                 extraClasses.push(change.value);
                 break;
 
+            case 'equal':
+                break;
+
+            default:
+                missingClasses.push(change.expected);
+                extraClasses.push(change.value);
+                break;
         }
     }
 
