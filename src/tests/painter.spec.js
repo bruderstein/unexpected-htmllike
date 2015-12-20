@@ -1210,6 +1210,126 @@ describe('Painter', () => {
 
     });
 
+    describe('class differences', () => {
+
+        it('outputs an extra className', () => {
+
+            Painter(pen, {
+                type: 'ELEMENT',
+                name: 'div',
+                attributes: [
+                    {
+                        name: 'className',
+                        value: 'one two three',
+                        diff: {
+                            type: 'class',
+                            extra: 'two'
+                        },
+                    }
+                ],
+                children: []
+            }, expect.inspect, expect.diff);
+
+            expect(pen.toString(), 'to equal',
+                '<div className="one two three" // extra class \'two\'\n' +
+                '/>');
+        });
+
+        it('outputs a missing className', () => {
+
+            Painter(pen, {
+                type: 'ELEMENT',
+                name: 'div',
+                attributes: [
+                    {
+                        name: 'className',
+                        value: 'one three',
+                        diff: {
+                            type: 'class',
+                            missing: 'cheese'
+                        },
+                    }
+                ],
+                children: []
+            }, expect.inspect, expect.diff);
+
+            expect(pen.toString(), 'to equal',
+                '<div className="one three" // missing class \'cheese\'\n' +
+                '/>');
+        });
+
+        it('outputs an extra and a missing className', () => {
+
+            Painter(pen, {
+                type: 'ELEMENT',
+                name: 'div',
+                attributes: [
+                    {
+                        name: 'className',
+                        value: 'one three',
+                        diff: {
+                            type: 'class',
+                            missing: 'cheese',
+                            extra: 'three',
+                        },
+                    }
+                ],
+                children: []
+            }, expect.inspect, expect.diff);
+
+            expect(pen.toString(), 'to equal',
+                '<div className="one three" // missing class \'cheese\'\n' +
+                '                           // extra class \'three\'\n' +
+                '/>');
+        });
+
+        it('outputs multiple extra classes', () => {
+
+            Painter(pen, {
+                type: 'ELEMENT',
+                name: 'div',
+                attributes: [
+                    {
+                        name: 'className',
+                        value: 'one three two',
+                        diff: {
+                            type: 'class',
+                            extra: 'two three'
+                        }
+                    }
+                ],
+                children: []
+            }, expect.inspect, expect.diff);
+
+            expect(pen.toString(), 'to equal',
+                '<div className="one three two" // extra classes \'two three\'\n' +
+                '/>');
+        });
+
+        it('outputs multiple missing classes', () => {
+
+            Painter(pen, {
+                type: 'ELEMENT',
+                name: 'div',
+                attributes: [
+                    {
+                        name: 'className',
+                        value: 'one three',
+                        diff: {
+                            type: 'class',
+                            missing: 'cheese another'
+                        }
+                    }
+                ],
+                children: []
+            }, expect.inspect, expect.diff);
+
+            expect(pen.toString(), 'to equal',
+                '<div className="one three" // missing classes \'cheese another\'\n' +
+                '/>');
+        });
+    });
+
     describe('expect.it', () => {
 
         it('should diff an expect.it assertion attribute', () => {
