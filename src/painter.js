@@ -329,6 +329,21 @@ function outputAttribute(pen, name, value, diff, inspect, diffFn) {
                         .sp()
                         .error('should be removed');
                 }).forceLineBreak();
+                break;
+
+            case 'class':
+                outputRawAttribute(pen, name, value, inspect, diff);
+                pen.sp().annotationBlock(pen => {
+                    if (diff.missing) {
+                        pen.error('missing class' + (diff.missing.indexOf(' ') !== -1 ? 'es' : '')).sp().append(inspect(diff.missing));
+                    }
+                    if (diff.extra) {
+                        if (diff.missing) {
+                            pen.nl().i();
+                        }
+                        pen.error('extra class' + (diff.extra.indexOf(' ') !== -1 ? 'es' : '')).sp().append(inspect(diff.extra));
+                    }
+                }).forceLineBreak();
         }
     } else {
         outputRawAttribute(pen, name, value, inspect);
