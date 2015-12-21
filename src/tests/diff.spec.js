@@ -1469,6 +1469,38 @@ describe('diff', () => {
                     });
             });
 
+            it('identifies a missing class when diffExtraClasses is false', () => {
+
+                return expect({
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'two one' },
+                        children: []
+                    }, 'when diffed with options against', { diffExactClasses: false, diffExtraClasses: false },
+                    {
+                        type: 'ELEMENT',
+                        name:'SomeElement',
+                        attribs: { className: 'xtra two' },
+                        children: []
+                    },
+                    'to satisfy', {
+                        diff: {
+                            type: 'ELEMENT',
+                            attributes: [
+                                {
+                                    name: 'className',
+                                    diff: {
+                                        type: 'class',
+                                        missing: 'xtra'
+                                    }
+                                }
+                            ]
+                        },
+                        weight: Diff.DefaultWeights.ATTRIBUTE_MISMATCH
+                    });
+
+            })
+
             it('ignores a missing class when diffMissingClasses is false', () => {
 
                 return expect({

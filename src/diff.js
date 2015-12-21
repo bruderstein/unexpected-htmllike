@@ -1,5 +1,4 @@
 import ArrayChangesAsync from 'array-changes-async';
-import ArrayChanges from 'array-changes';
 import ObjectAssign from 'object-assign';
 import isNativeType from './isNativeType';
 import convertToDiff from './convertToDiff';
@@ -346,45 +345,39 @@ function diffAttributes(actualAttributes, expectedAttributes, expect, options) {
 
 function getClassDiff(actualClasses, expectedClasses, diffResult, weights, options) {
 
-    expectedClasses = (expectedClasses || '').split(' ').filter(c => c).sort();
-    actualClasses = (actualClasses || '').split(' ').filter(c => c).sort();
+    expectedClasses = (expectedClasses || '')
+        .split(' ')
+        .filter(c => c)
+        .reduce((classes, c) => {
+            classes[c] = true;
+            return classes;
+        }, {});
 
-    const changes = ArrayChanges(actualClasses, expectedClasses, (a, b) => a === b, () => false);
-    const missingClasses = [];
-    const extraClasses = [];
+    actualClasses = (actualClasses || '')
+        .split(' ')
+        .filter(c => c)
+        .reduce((classes, c) => {
+            classes[c] = true;
+            return classes;
+        }, {});
 
-    for(let changeIndex = 0; changeIndex < changes.length; ++changeIndex) {
 
-        const change = changes[changeIndex];
-
-        switch(change.type) {
-            case 'insert':
-                missingClasses.push(change.value);
-                break;
-
-            case 'remove':
-                extraClasses.push(change.value);
-                break;
-
-            case 'equal':
-                break;
-
-            default:
-                missingClasses.push(change.expected);
-                extraClasses.push(change.value);
-                break;
+    let attributeDiff;
+    if (options.diffMissingClasses) {
+        const missingClasses = Object.keys(expectedClasses).filter(c => !actualClasses[c]);
+        if (missingClasses.length) {
+            attributeDiff = {};
+            attributeDiff.missing = missingClasses.join(' ');
         }
     }
 
-    let attributeDiff;
-    if (options.diffExtraClasses && extraClasses.length) {
-        attributeDiff = {};
-        attributeDiff.extra = extraClasses.join(' ');
-    }
+    if (options.diffExtraClasses) {
+        const extraClasses = Object.keys(actualClasses).filter(c => !expectedClasses[c]);
 
-    if (options.diffMissingClasses && missingClasses.length) {
-        attributeDiff = attributeDiff || {};
-        attributeDiff.missing = missingClasses.join(' ');
+        if (extraClasses.length) {
+            attributeDiff = attributeDiff || {};
+            attributeDiff.extra = extraClasses.join(' ');
+        }
     }
 
     if (attributeDiff) {
