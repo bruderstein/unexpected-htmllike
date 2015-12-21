@@ -48,7 +48,7 @@ Attribute := {
     diff: undefined | AttributeDiff
 }
 
-AttributeDiff := MissingAttributeDiff | ExtraAttributeDiff | ChangedAttributeDiff;
+AttributeDiff := MissingAttributeDiff | ExtraAttributeDiff | ChangedAttributeDiff | ClassAttributeDiff;
 
 MissingAttributeDiff := {
     type: 'missing'
@@ -61,6 +61,12 @@ ExtraAttributeDiff := {
 ChangedAttributeDiff := {
     type: 'changed'
     expectedValue: 'expected-value-of-the-attribute'   // Also here can be any type
+}
+
+ClassAttributeDiff := {
+    type: 'class'
+    missing: 'missing classes separated by spaces'
+    extra: 'extra classes separated by spaces'
 }
 
 ElementDiff := MissingElementDiff | ExtraElementDiff | DifferentElementDiff 

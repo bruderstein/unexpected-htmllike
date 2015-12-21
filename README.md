@@ -71,6 +71,11 @@ Returns an object with each attribute as a key/value pair. Note that when output
 and other content types in curly braces (`{ }`). This matches the React/JSX style of attribute definition.  If you want to force quoted attributes (such
 as XML or HTML output), simply ensure the attribute values are strings.
 
+## `classAttributeName`  (since 0.4.0)
+Property that holds the string name of the class attribute.  This normally `class`, but could be `className` in the case
+of ReactElement (i.e. JSX)  When diffing, if the `classAttributeName` is the same for both actual and expected adapters,
+then the classes can be optionally diffed using class semantics.
+
 # API
 
 ## constructor (adapter)
@@ -117,6 +122,34 @@ of assertion, but the default is true to ensure that the default is always an ex
 When true (the default), if an element is found in the actual to be wrapping what is expected, it is highlighted as a wrapper
 that should be removed.  When false, if the content does not match exactly (ie. diff returns a weight of non-zero - see return value),
 then the wrapper is outputted in grey (the `prismPunctuation` style), and is always separated onto a separate line.
+
+### diffExactClasses (boolean)
+When true (the deafult), the `class` (or `className`, depending on the adapter) attribute will be diffed as all other
+string attributes - i.e. a single space difference will be considered different. When false, then HTML `class` semantics
+are used, such that order is irrelevant, multiple spaces are ignored, and the following two flags can be used to ignore
+either missing or extra classes.
+Note that the class attribute for the actual and expected adapters must be the same in order to use these flags.
+This means that they will not have any effect if comparing (for example) the DOM (using `class` attribute) with React 
+JSX (using `className` attribute). This may change in a future release.
+
+### diffExtraClasses (boolean)
+When true, and `diffExactClasses` is false, then any extra classes in the actual are treated as a diff. When false, extra
+classes are ignored.  This is the most likely flag to be false when diffing, as it is likely you wish to ignore extra classes 
+on the actual over what was expected.  
+e.g. actual:  `<div class="big special hero">`
+     expected: `<div class="hero big">`
+This will match when `diffExtraClasses` is false, as the class `special` is ignored. When true, these two items would
+not be treated as being the same. Note that the order is irrelevant.
+Note that the class attribute for the actual and expected adapters must be the same in order to use these flags.
+This means that they will not have any effect if comparing (for example) the DOM (using `class` attribute) with React 
+JSX (using `className` attribute). This may change in a future release.
+
+### diffMissingClasses (boolean)
+When true (the default), and `diffExactClasses` is false, then any missing classes in the actual are treated as a diff.
+When false, missing classes from the actual (based on the expected classes) are ignored.
+Note that the class attribute for the actual and expected adapters must be the same in order to use these flags.
+This means that they will not have any effect if comparing (for example) the DOM (using `class` attribute) with React 
+JSX (using `className` attribute). This may change in a future release.
 
 ### weights  (object)
 This must be an object that represents the different weights for the various differences that can occur.
