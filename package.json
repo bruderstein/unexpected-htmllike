@@ -1,6 +1,6 @@
 {
   "name": "unexpected-htmllike",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Helper library for unexpected plugins that perform assertions on XML like structures",
   "author": {
     "name": "Dave Brotherstone",

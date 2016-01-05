@@ -1040,6 +1040,61 @@ describe('diff', () => {
         });
     });
 
+    it('treats undefined attributes as not defined', () => {
+        return expect({
+            name: 'span',
+            attribs: {
+                id: 'bar',
+                className: undefined
+            },
+            children: []
+        }, 'when diffed with options against', { diffExtraAttributes: true }, {
+            name: 'span',
+            attribs: {
+                id: 'bar'
+            },
+            children: []
+        }, 'to satisfy', {
+            diff: {
+                type: 'ELEMENT',
+                name: 'span',
+                attributes: [
+                    { name: 'id', value: 'bar' },
+                    { name: 'className', value: undefined, diff: undefined }
+                ]
+            },
+            weight: Diff.DefaultWeights.OK
+        });
+
+    });
+
+    it('treats null attributes as defined', () => {
+        return expect({
+            name: 'span',
+            attribs: {
+                id: 'bar',
+                className: null
+            },
+            children: []
+        }, 'when diffed with options against', { diffExtraAttributes: true }, {
+            name: 'span',
+            attribs: {
+                id: 'bar'
+            },
+            children: []
+        }, 'to satisfy', {
+            diff: {
+                type: 'ELEMENT',
+                name: 'span',
+                attributes: [
+                    { name: 'id', value: 'bar' },
+                    { name: 'className', value: null, diff: { type: 'extra' } }
+                ]
+            },
+            weight: Diff.DefaultWeights.ATTRIBUTE_EXTRA
+        });
+    });
+
     it("doesn't wrap an element when it means there are missing children", () => {
         return expect({
             name: 'SomeElement',

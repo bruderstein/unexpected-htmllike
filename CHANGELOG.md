@@ -24,3 +24,7 @@ and have an extra attribute on a child, a `contains` check would not find the el
 * Class diffing.  The class (or className in the case of React) attribute can be diffed using class semantics, i.e. 
 order is unimportant, and optionally extra and/or missing classes can be ignored.
 
+### v0.4.1
+* Fix for undefined attributes in actual being treated as "extra" attributes
+
+
