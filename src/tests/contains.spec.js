@@ -51,6 +51,12 @@ expect.addAssertion('<TestHtmlElement> when checked with options to contain <obj
     return shiftResultOrPromise(containsResult, expect);
 });
 
+expect.addAssertion('<string> to eventually equal <string>', function (expect, subject, value) {
+    return expect.promise((resolve, reject) => {
+        setTimeout(() => expect(subject, 'to equal', value), 50);
+    });
+})
+
 describe('contains', () => {
 
     it('finds an exact match', () => {
@@ -283,6 +289,41 @@ describe('contains', () => {
                 }
             ]
         }), 'to satisfy', {
+            found: true,
+            bestMatch: {
+                weight: 0
+            }
+        });
+    });
+
+    it('finds a nested component with missing children and extra attribute (async)', () => {
+        return expect({
+            name: 'div', attribs: {}, children: [
+                {
+                    name: 'span',
+                    attribs: {},
+                    children: [ 'one' ]
+                },
+                {
+                    name: 'span',
+                    attribs: { className: 'dummy' },
+                    children: [ 'two' ]
+                },
+                {
+                    name: 'span',
+                    attribs: {},
+                    children: [ 'three' ]
+                }
+            ]
+        }, 'when checked with options to contain', { diffExtraChildren: false, diffExtraAttributes: false }, {
+            name: 'div', attribs: {}, children: [
+                {
+                    name: 'span',
+                    attribs: {},
+                    children: [ expect.it('to eventually equal', 'two') ]
+                }
+            ]
+        }, 'to satisfy', {
             found: true,
             bestMatch: {
                 weight: 0

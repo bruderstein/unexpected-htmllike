@@ -1,5 +1,6 @@
 import Diff from './diff';
 import isNativeType from './isNativeType';
+import RequiresAsyncError from './requiresAsyncError';
 
 function contains(actualAdapter, expectedAdapter, actual, expected, equal, options) {
 

@@ -4,13 +4,16 @@ import isNativeType from './isNativeType';
 import convertToDiff from './convertToDiff';
 import LineBreaker from './lineBreaker';
 import Weights from './Weights';
-import DiffCommon from './diffCommon';
+import * as DiffCommon from './diffCommon';
 
 
 function diffElements(actualAdapter, expectedAdapter, actual, expected, expect, options) {
 
     options = ObjectAssign({}, DiffCommon.defaultOptions, options);
     options.weights = ObjectAssign({}, DiffCommon.DefaultWeights, options.weights);
+    if (actualAdapter.classAttributeName && actualAdapter.classAttributeName === expectedAdapter.classAttributeName) {
+        options.classAttributeName = actualAdapter.classAttributeName;
+    }
 
     return diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, options)
         .then(diffResult => {
@@ -192,52 +195,6 @@ function diffAttributes(actualAttributes, expectedAttributes, expect, options) {
 }
 
 
-function getClassDiff(actualClasses, expectedClasses, diffResult, weights, options) {
-
-    expectedClasses = (expectedClasses || '')
-        .split(' ')
-        .filter(c => c)
-        .reduce((classes, c) => {
-            classes[c] = true;
-            return classes;
-        }, {});
-
-    actualClasses = (actualClasses || '')
-        .split(' ')
-        .filter(c => c)
-        .reduce((classes, c) => {
-            classes[c] = true;
-            return classes;
-        }, {});
-
-
-    let attributeDiff;
-    if (options.diffMissingClasses) {
-        const missingClasses = Object.keys(expectedClasses).filter(c => !actualClasses[c]);
-        if (missingClasses.length) {
-            attributeDiff = {};
-            attributeDiff.missing = missingClasses.join(' ');
-        }
-    }
-
-    if (options.diffExtraClasses) {
-        const extraClasses = Object.keys(actualClasses).filter(c => !expectedClasses[c]);
-
-        if (extraClasses.length) {
-            attributeDiff = attributeDiff || {};
-            attributeDiff.extra = extraClasses.join(' ');
-        }
-    }
-
-    if (attributeDiff) {
-        attributeDiff.type = 'class';
-        diffResult.diff = attributeDiff;
-        // Not sure what the best to do with the weights is
-        // - we might need to have some different weights for class mismatches
-        // Only real-world examples will help show what needs to be done here
-        weights.add(options.weights.ATTRIBUTE_MISMATCH);
-    }
-}
 
 
 function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, options) {

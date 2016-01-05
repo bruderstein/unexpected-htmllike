@@ -1,10 +1,11 @@
 
+import ObjectAssign from 'object-assign';
 import convertToDiff from './convertToDiff';
 import Weights from './Weights';
 
 // Weightings for diff heuristics
 
-const DefaultWeights = {
+export const DefaultWeights = {
     OK: 0,                  // Only here as a convenience for tests, WEIGHT_OK is used as the constant
     NATIVE_NONNATIVE_MISMATCH: 15,
     NAME_MISMATCH: 10,
@@ -25,7 +26,7 @@ const DefaultWeights = {
                              // for an example)
 };
 
-const defaultOptions = {
+export const defaultOptions = {
     diffExtraAttributes: true,
     diffRemovedAttributes: true,
     diffExtraChildren: true,
@@ -36,9 +37,18 @@ const defaultOptions = {
     diffMissingClasses: true
 };
 
-const WEIGHT_OK = 0;
+export const WEIGHT_OK = 0;
 
-const checkElementWrapperResult = function (actualAdapter, actual, currentDiffResult, wrapperResult, options) {
+export const getOptions = function (options) {
+
+    options = ObjectAssign({}, DiffCommon.defaultOptions, options);
+    options.weights = ObjectAssign({}, DiffCommon.DefaultWeights, options.weights);
+    if (actualAdapter.classAttributeName && actualAdapter.classAttributeName === expectedAdapter.classAttributeName) {
+        options.classAttributeName = actualAdapter.classAttributeName;
+    }
+};
+
+export const checkElementWrapperResult = function (actualAdapter, actual, currentDiffResult, wrapperResult, options) {
 
     let diffResult = currentDiffResult;
     const wrapperWeight = options.diffWrappers ? options.weights.WRAPPER_REMOVED : WEIGHT_OK;
@@ -63,7 +73,7 @@ const checkElementWrapperResult = function (actualAdapter, actual, currentDiffRe
     return diffResult;
 };
 
-const getExpectItContentErrorResult = function (actual, expected, error, options) {
+export const getExpectItContentErrorResult = function (actual, expected, error, options) {
 
     const diffResult = {
         type: 'CONTENT',
@@ -83,7 +93,7 @@ const getExpectItContentErrorResult = function (actual, expected, error, options
     };
 };
 
-const getNativeContentResult = function (actual, expected, weights, options) {
+export const getNativeContentResult = function (actual, expected, weights, options) {
 
     const diffResult = {
         type: 'CONTENT',
@@ -105,7 +115,7 @@ const getNativeContentResult = function (actual, expected, weights, options) {
     return diffResult;
 };
 
-const getNativeNonNativeResult = function (actual, expected, weights, expectedAdapter, options) {
+export const getNativeNonNativeResult = function (actual, expected, weights, expectedAdapter, options) {
 
     weights.add(options.weights.NATIVE_NONNATIVE_MISMATCH);
     return {
@@ -118,7 +128,7 @@ const getNativeNonNativeResult = function (actual, expected, weights, expectedAd
     };
 };
 
-const getNonNativeNativeResult = function (actual, expected, weights, actualAdapter, expectedAdapter, options) {
+export const getNonNativeNativeResult = function (actual, expected, weights, actualAdapter, expectedAdapter, options) {
 
     weights.add(options.weights.NATIVE_NONNATIVE_MISMATCH);
     const diffResult = convertToDiff(actualAdapter, actual);
@@ -129,7 +139,7 @@ const getNonNativeNativeResult = function (actual, expected, weights, actualAdap
     return diffResult;
 };
 
-const getElementResult = function (actualName, expectedName, weights, options) {
+export const getElementResult = function (actualName, expectedName, weights, options) {
     const diffResult = {
         type: 'ELEMENT',
         name: actualName
@@ -145,7 +155,7 @@ const getElementResult = function (actualName, expectedName, weights, options) {
     return diffResult;
 };
 
-const diffAttributes = function (actualAttributes, expectedAttributes, expect, expectItHandler, options) {
+export const diffAttributes = function (actualAttributes, expectedAttributes, expect, expectItHandler, options) {
 
     let diffWeights = new Weights();
     const diffResult = [];
@@ -157,18 +167,23 @@ const diffAttributes = function (actualAttributes, expectedAttributes, expect, e
 
         if (expectedAttributes.hasOwnProperty(attrib)) {
             const expectedAttrib = expectedAttributes[attrib];
-            if (typeof expectedAttrib === 'function' && expectedAttrib._expectIt) {
+             if (typeof expectedAttrib === 'function' && expectedAttrib._expectIt) {
                 // This is an assertion in the form of expect.it(...)
 
                 expectItHandler(expectedAttrib, actualAttributes[attrib], attribResult, diffWeights, options);
 
             } else if (!expect.equal(actualAttributes[attrib], expectedAttributes[attrib])) {
-                diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
-                attribResult.diff = {
-                    type: 'changed',
-                    expectedValue: expectedAttributes[attrib]
-                };
-            }
+                 if (attrib === options.classAttributeName && !options.diffExactClasses) {
+                     getClassDiff(actualAttributes[attrib], expectedAttributes[attrib], attribResult, diffWeights, options);
+                 }
+                 else {
+                     diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
+                     attribResult.diff = {
+                         type: 'changed',
+                         expectedValue: expectedAttributes[attrib]
+                     };
+                 }
+             }
         } else {
             if (options.diffExtraAttributes) {
                 diffWeights.addReal(options.weights.ATTRIBUTE_EXTRA);
@@ -206,17 +221,50 @@ const diffAttributes = function (actualAttributes, expectedAttributes, expect, e
 }
 
 
-export default {
-    defaultOptions,
-    DefaultWeights,
-    checkElementWrapperResult,
-    getExpectItContentErrorResult,
-    getNativeContentResult,
-    getNativeNonNativeResult,
-    getNonNativeNativeResult,
-    getElementResult,
-    diffAttributes,
-    WEIGHT_OK
-};
+function getClassDiff(actualClasses, expectedClasses, diffResult, weights, options) {
 
+    expectedClasses = (expectedClasses || '')
+        .split(' ')
+        .filter(c => c)
+        .reduce((classes, c) => {
+            classes[c] = true;
+            return classes;
+        }, {});
+
+    actualClasses = (actualClasses || '')
+        .split(' ')
+        .filter(c => c)
+        .reduce((classes, c) => {
+            classes[c] = true;
+            return classes;
+        }, {});
+
+
+    let attributeDiff;
+    if (options.diffMissingClasses) {
+        const missingClasses = Object.keys(expectedClasses).filter(c => !actualClasses[c]);
+        if (missingClasses.length) {
+            attributeDiff = {};
+            attributeDiff.missing = missingClasses.join(' ');
+        }
+    }
+
+    if (options.diffExtraClasses) {
+        const extraClasses = Object.keys(actualClasses).filter(c => !expectedClasses[c]);
+
+        if (extraClasses.length) {
+            attributeDiff = attributeDiff || {};
+            attributeDiff.extra = extraClasses.join(' ');
+        }
+    }
+
+    if (attributeDiff) {
+        attributeDiff.type = 'class';
+        diffResult.diff = attributeDiff;
+        // Not sure what the best to do with the weights is
+        // - we might need to have some different weights for class mismatches
+        // Only real-world examples will help show what needs to be done here
+        weights.add(options.weights.ATTRIBUTE_MISMATCH);
+    }
+}
 

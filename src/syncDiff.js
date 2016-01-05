@@ -4,7 +4,7 @@ import isNativeType from './isNativeType';
 import convertToDiff from './convertToDiff';
 import LineBreaker from './lineBreaker';
 import Weights from './Weights';
-import DiffCommon from './diffCommon';
+import * as DiffCommon from './diffCommon';
 import RequiresAsyncError from './requiresAsyncError';
 
 
@@ -12,6 +12,9 @@ function diffElements(actualAdapter, expectedAdapter, actual, expected, expect, 
 
     options = ObjectAssign({}, DiffCommon.defaultOptions, options);
     options.weights = ObjectAssign({}, DiffCommon.DefaultWeights, options.weights);
+    if (actualAdapter.classAttributeName && actualAdapter.classAttributeName === expectedAdapter.classAttributeName) {
+        options.classAttributeName = actualAdapter.classAttributeName;
+    }
 
     var diffResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, options)
     return {
@@ -300,7 +303,7 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
     const changes = ArrayChanges(actualChildren, expectedChildren,
         function (a, b, aIndex, bIndex) {
             const elementDiff = diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options);
-            return elementDiff.weight.total === DiffCommon.WEIGHT_OK;
+            return elementDiff.weight.real === DiffCommon.WEIGHT_OK;
         },
 
         function (a, b, aIndex, bIndex) {
