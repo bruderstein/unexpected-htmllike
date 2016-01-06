@@ -53,7 +53,15 @@ expect.addAssertion('<TestHtmlElement> when checked with options to contain <obj
 
 expect.addAssertion('<string> to eventually equal <string>', function (expect, subject, value) {
     return expect.promise((resolve, reject) => {
-        setTimeout(() => expect(subject, 'to equal', value), 50);
+        setTimeout(() => {
+            if (subject === value) {
+                resolve();
+            } else {
+                expect.withError(() => {
+                    expect(subject, 'to equal', value);
+                }, err => reject(err));
+            }
+        }, 50);
     });
 })
 
