@@ -185,7 +185,7 @@ export const diffAttributes = function (actualAttributes, expectedAttributes, ex
                  }
              }
         } else {
-            if (options.diffExtraAttributes) {
+            if (options.diffExtraAttributes && actualAttributes[attrib] !== undefined) {
                 diffWeights.addReal(options.weights.ATTRIBUTE_EXTRA);
                 attribResult.diff = {
                     type: 'extra'
