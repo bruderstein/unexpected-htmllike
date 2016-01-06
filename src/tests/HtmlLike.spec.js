@@ -351,7 +351,7 @@ describe('HtmlLikeComponent', () => {
 
         });
 
-        it.only('outputs the diff of a single component with a different attribute and a matching attribute after', () => {
+        it('outputs the diff of a single component with a different attribute and a matching attribute after', () => {
 
             return expect(createActual({
                 name: 'div', attribs: { id: 'foo', className: 'testing' }, children: []
@@ -1267,7 +1267,7 @@ describe('HtmlLikeComponent', () => {
             );
         });
 
-        it.only('outputs the output from an asynchronous expect.it content assertion that fails', () => {
+        it('outputs the output from an asynchronous expect.it content assertion that fails', () => {
 
             return expect(
                 createActual({ name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }),
