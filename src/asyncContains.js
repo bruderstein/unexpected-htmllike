@@ -1,5 +1,6 @@
 
-import Diff from './diff';
+import AsyncDiff from './asyncDiff';
+import { DefaultWeights } from './diffCommon';
 import isNativeType from './isNativeType';
 
 function contains(actualAdapter, expectedAdapter, actual, expected, equal, options) {
@@ -33,9 +34,10 @@ function containsContent(actualAdapter, expectedAdapter, actual, expected, equal
         bestMatchItem: null
     };
 
-    return Diff.diffElements(actualAdapter, expectedAdapter, actual, expected, equal, options).then(diffResult => {
+    return AsyncDiff.diffElements(actualAdapter, expectedAdapter, actual, expected, equal, options)
+        .then(diffResult => {
 
-        if (diffResult.weight === Diff.DefaultWeights.OK) {
+        if (diffResult.weight === DefaultWeights.OK) {
             result.found = true;
             result.bestMatch = diffResult;
             result.bestMatchItem = actual;
@@ -52,7 +54,8 @@ function containsContent(actualAdapter, expectedAdapter, actual, expected, equal
 
                 const checkChild = function (childIndex) {
 
-                    return containsContent(actualAdapter, expectedAdapter, children[childIndex], expected, equal, options).then(childResult => {
+                    return containsContent(actualAdapter, expectedAdapter, children[childIndex], expected, equal, options)
+                        .then(childResult => {
 
                         if (childResult.found) {
                             return {
