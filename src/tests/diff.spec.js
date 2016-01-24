@@ -429,6 +429,48 @@ describe('diff', () => {
         });
     });
 
+    it('diffs an out of order element', () => {
+
+        return expect(createActual({ name: 'span', attribs: {}, children: [
+            { name: 'Test', attribs: {}, children: ['one'] },
+            { name: 'Test', attribs: {}, children: ['two'] },
+            { name: 'Test', attribs: {}, children: ['three'] }
+        ] }), 'when diffed against', createExpected({ name: 'span', attribs: {}, children: [
+
+            { name: 'Test', attribs: {}, children: ['one'] },
+            { name: 'Test', attribs: {}, children: ['three'] },
+            { name: 'Test', attribs: {}, children: ['two'] }
+        ] }), 'to satisfy', {
+            diff: {
+                children: [
+                    {
+                        type: 'ELEMENT',
+                        name: 'Test',
+                        children: [ { type: 'CONTENT', value: 'one' } ]
+                    },
+                    {
+                        type: 'ELEMENT',
+                        name: 'Test',
+                        children: [ { type: 'CONTENT', value: 'three' } ],
+                        diff: { type: 'missing', actualIndex: 2 }
+                    },
+                    {
+                        type: 'ELEMENT',
+                        name: 'Test',
+                        children: [ { type: 'CONTENT', value: 'two' } ]
+                    },
+                    {
+                        type: 'ELEMENT',
+                        name: 'Test',
+                        children: [ { type: 'CONTENT', value: 'three' } ],
+                        diff: { type: 'extra' }
+                    }
+
+                ]
+            }
+        });
+    });
+
     it('diffs a missing content entry', () => {
         // See comments in 'diffs a removed middle child' as to why this isn't an ideal diff
         return expect(createActual({ name: 'span', attribs: {}, children: [
@@ -1536,7 +1578,7 @@ describe('diff', () => {
                         weight: Diff.DefaultWeights.ATTRIBUTE_MISMATCH
                     });
 
-            })
+            });
 
             it('ignores a missing class when diffMissingClasses is false', () => {
 

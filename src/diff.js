@@ -539,12 +539,23 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
                     switch(diffItem.type) {
                         case 'insert':
                             insertCount++;
-                            itemResult = convertToDiff(expectedAdapter, diffItem.value);
+                            let actualIndex = null;
+                            if (typeof diffItem.actualIndex === 'number') {
+                                itemResult = convertToDiff(actualAdapter, diffItem.value);
+                                actualIndex = diffItem.actualIndex;
+                            } else {
+                                itemResult = convertToDiff(expectedAdapter, diffItem.value);
+                            }
                             if (options.diffMissingChildren) {
                                 diffWeights.add(options.weights.CHILD_MISSING);
                                 itemResult.diff = {
                                     type: 'missing'
                                 };
+
+                                if (actualIndex !== null) {
+                                    itemResult.diff.actualIndex = actualIndex;
+                                }
+
                                 diffResult.push(itemResult);
                             }
                             break;

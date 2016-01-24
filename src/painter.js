@@ -13,6 +13,9 @@ export default function painter(pen, description, inspect, diffFn) {
                 pen.forceLineBreakBefore();
                 pen.annotationBlock(function () {
                     this.error('missing').sp();
+                    if (typeof description.diff.actualIndex === 'number') {
+                        this.error('(found at index ' + description.diff.actualIndex + ')').sp();
+                    }
                     this.block(function () {
                         painter(this, {
                             type: description.type,

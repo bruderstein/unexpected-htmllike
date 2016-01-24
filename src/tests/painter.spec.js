@@ -1210,6 +1210,51 @@ describe('Painter', () => {
 
     });
 
+    it('outputs a moved element hint', () => {
+
+        /*
+         * This is where the actual is
+         *   <span>
+         *       <Test>one</Test>
+         *       <Test>three</Test>
+         *       <Test>two</Test>
+         *   </span>
+         *
+         *   And should be one, two, three.
+         */
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'span',
+            attributes: [],
+            children: [
+                { type: 'ELEMENT', name: 'Test', attributes: [], children: [ { type: 'CONTENT', value: 'one' } ] },
+                {
+                    type: 'ELEMENT', name: 'Test', attributes: [], children: [ { type: 'CONTENT', value: 'two' } ],
+                    diff: {
+                        type: 'missing',
+                        actualIndex: 2
+                    }
+                },
+                { type: 'ELEMENT', name: 'Test', attributes: [], children: [ { type: 'CONTENT', value: 'three' } ] },
+                {
+                    type: 'ELEMENT', name: 'Test', attributes: [], children: [ { type: 'CONTENT', value: 'two' } ],
+                    diff: {
+                        type: 'extra'
+                    }
+                }
+            ]
+        });
+
+        expect(pen.toString(), 'to equal',
+            '<span>\n' +
+            '  <Test>one</Test>\n' +
+            '  // missing (found at index 2) <Test>two</Test>\n' +
+            '  <Test>three</Test>\n' +
+            '  <Test>two</Test> // should be removed\n' +
+            '</span>');
+    });
+
     describe('class differences', () => {
 
         it('outputs an extra className', () => {
