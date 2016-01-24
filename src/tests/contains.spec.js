@@ -3,20 +3,20 @@ import Unexpected from 'unexpected';
 import Contains from '../contains';
 import Diff from '../diff';
 
+import {
+    expectedSymbol,
+    actualSymbol,
+    TestExpectedAdapter,
+    TestActualAdapter,
+    createActual,
+    createExpected
+} from './mockEntities';
+
 const expect = Unexpected.clone();
 
-const TestAdapter = {
-    getName(comp) { return comp.name; },
-
-    getAttributes(comp) { return comp.attribs; },
-
-    getChildren(comp) {
-        return (comp.children && [].concat([], comp.children)) || [];
-    }
-};
 
 function getContains(actual, expected, options) {
-    return Contains(TestAdapter, TestAdapter, actual, expected, expect, options);
+    return Contains(TestActualAdapter, TestExpectedAdapter, actual, expected, expect, options);
 }
 
 expect.addType({
@@ -33,7 +33,7 @@ expect.addType({
 
 expect.addAssertion('<TestHtmlElement> when checked to contain <TestHtmlElement> <assertion>', function (expect, subject, value) {
 
-    return Contains(TestAdapter, TestAdapter, subject, value, expect, {}).then(result => {
+    return Contains(TestActualAdapter, TestExpectedAdapter, subject, value, expect, {}).then(result => {
         expect.shift(result);
     });
 });
@@ -41,7 +41,7 @@ expect.addAssertion('<TestHtmlElement> when checked to contain <TestHtmlElement>
 
 expect.addAssertion('<TestHtmlElement> when checked with options to contain <object> <TestHtmlElement> <assertion>', function (expect, subject, options, value) {
 
-    return Contains(TestAdapter, TestAdapter, subject, value, expect, options).then(result => {
+    return Contains(TestActualAdapter, TestExpectedAdapter, subject, value, expect, options).then(result => {
         expect.shift(result);
     });
 });
@@ -49,61 +49,59 @@ expect.addAssertion('<TestHtmlElement> when checked with options to contain <obj
 describe('contains', () => {
 
     it('finds an exact match', () => {
-        return expect(
-            { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] },
-            'when checked to contain',
-            { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] },
-            'to satisfy',
-            { found: true }
-        );
+        return expect(createActual(
+            { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }
+        ), 'when checked to contain', createExpected(
+            { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }
+        ), 'to satisfy', { found: true });
 
     });
 
     it('reports the inspection of the found item', () => {
-        return expect(
-            { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] },
-            'when checked to contain',
-            { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] },
-            'to satisfy',
-            {
-                found: true,
-                bestMatch: {
-                    diff: {
-                        type: 'ELEMENT',
-                        name: 'span',
-                        attributes: [ { name: 'className', value: 'foo' } ]
-                    }
+        return expect(createActual(
+            { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }
+        ), 'when checked to contain', createExpected(
+            { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }
+        ), 'to satisfy', {
+            found: true,
+            bestMatch: {
+                diff: {
+                    type: 'ELEMENT',
+                    name: 'span',
+                    attributes: [ { name: 'className', value: 'foo' } ]
                 }
             }
-        );
+        });
     });
 
     it('reports not found when no exact match exists', () => {
-        return expect(
-            { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] },
-            'when checked to contain',
-            { name: 'span', attribs: { className: 'foo' }, children: [ 'some other content'] },
-            'to satisfy',
-            { found: false }
-        );
+        return expect(createActual(
+            { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }
+        ), 'when checked to contain', createExpected(
+            { name: 'span', attribs: { className: 'foo' }, children: [ 'some other content'] }
+        ), 'to satisfy', { found: false });
     });
 
     it('finds an element nested one deep', () => {
-        return expect({ name: 'div', attribs: {}, children: [
+        return expect(createActual({ name: 'div', attribs: {}, children: [
             { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }
         ]
-        }, 'when checked to contain', { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }, 'to satisfy', { found: true });
+        }), 'when checked to contain', createExpected(
+            { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }
+        ), 'to satisfy', { found: true });
     });
 
     it('finds a deep nested element', () => {
-        return expect({ name: 'div', attribs: {}, children: [
+        return expect(createActual({ name: 'div', attribs: {}, children: [
             { name: 'span', attribs: { className: 'foo' }, children: [ 'blah'] },
             { name: 'span', attribs: { className: 'foo' }, children: [
                 { name: 'span', attribs: { className: 'foo' }, children: [ 'some content' ] }
             ] },
             { name: 'span', attribs: { className: 'foo' }, children: [ 'blubs'] }
         ]
-        }, 'when checked to contain', { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }, 'to satisfy', { found: true, bestMatch: {
+        }), 'when checked to contain', createExpected(
+            { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }
+        ), 'to satisfy', { found: true, bestMatch: {
             diff: {
                 type: 'ELEMENT',
                 name: 'span',
@@ -113,30 +111,36 @@ describe('contains', () => {
     });
 
     it('finds a best match when the content is different', () => {
-        return expect({ name: 'div', attribs: {}, children: [
+        return expect(createActual({ name: 'div', attribs: {}, children: [
             { name: 'span', attribs: { className: 'foo' }, children: [ 'some different content' ] }
         ]
-        }, 'when checked to contain', { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }, 'to satisfy', { found: false, bestMatchItem: {
+        }), 'when checked to contain', createExpected(
+            { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }
+        ), 'to satisfy', { found: false, bestMatchItem: {
             name: 'span', attribs: { className: 'foo' }, children: [ 'some different content' ]
         } });
     });
 
     it('finds a best match in an array of children with an extra attribute', () => {
-        return expect({ name: 'div', attribs: {}, children: [
+        return expect(createActual({ name: 'div', attribs: {}, children: [
             { name: 'span', attribs: { className: 'foo' }, children: [ 'some content' ] },
             { name: 'span', attribs: { className: 'bar' }, children: [ 'some content' ] },
             { name: 'span', attribs: { className: 'candidate', id: 'abc' }, children: [ 'some content' ] }
         ]
-        }, 'when checked to contain', { name: 'span', attribs: { className: 'candidate' }, children: [ 'some content'] }, 'to satisfy', { found: false, bestMatchItem: {
+        }), 'when checked to contain', createExpected(
+            { name: 'span', attribs: { className: 'candidate' }, children: [ 'some content'] }
+        ), 'to satisfy', { found: false, bestMatchItem: {
             name: 'span', attribs: { className: 'candidate', id: 'abc' }, children: [ 'some content' ]
         } });
     });
 
     it('returns a diff when the content is different', () => {
-        return expect({ name: 'div', attribs: {}, children: [
+        return expect(createActual({ name: 'div', attribs: {}, children: [
             { name: 'span', attribs: { className: 'foo' }, children: [ 'some different content' ] }
         ]
-        }, 'when checked to contain', { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }, 'to satisfy', {
+        }), 'when checked to contain', createExpected(
+            { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }
+        ), 'to satisfy', {
             found: false,
             bestMatch: {
                 diff: {
@@ -170,20 +174,20 @@ describe('contains', () => {
             ]
         };
 
-        return expect({
+        return expect(createActual({
             name: 'body', attribs: {}, children: [ searchItem ]
-        }, 'when checked with options to contain', { diffWrappers: false }, {
+        }), 'when checked with options to contain', { diffWrappers: false }, createExpected({
             name: 'div', attribs: {}, children: [
                 { name: 'span', attribs: { className: 'foo' }, children: ['some content'] }
             ]
-        }, 'to satisfy', {
+        }), 'to satisfy', {
             found: false,
             bestMatchItem: searchItem
         });
     });
 
     it('doesn\'t include wrappers in the bestMatch around the item that is found', () => {
-        return expect({
+        return expect(createActual({
             name: 'body', attribs: {}, children: [ {
                 name: 'div', attribs: {}, children: [
                     {
@@ -195,11 +199,11 @@ describe('contains', () => {
                     }
                 ]
             } ]
-        }, 'when checked with options to contain', { diffWrappers: false }, {
+        }), 'when checked with options to contain', { diffWrappers: false }, createExpected({
             name: 'div', attribs: {}, children: [
                 { name: 'span', attribs: { className: 'foo' }, children: ['some content'] }
             ]
-        }, 'to satisfy', {
+        }), 'to satisfy', {
             found: false,
             bestMatch: {
                 diff: {
@@ -215,7 +219,7 @@ describe('contains', () => {
     });
 
     it('doesn\'t include wrappers in the bestMatch around an item that is found to match', () => {
-        return expect({
+        return expect(createActual({
             name: 'body', attribs: {}, children: [{
                 name: 'div', attribs: {}, children: [
                     {
@@ -227,11 +231,11 @@ describe('contains', () => {
                     }
                 ]
             }]
-        }, 'when checked with options to contain', { diffWrappers: false }, {
+        }), 'when checked with options to contain', { diffWrappers: false }, createExpected({
             name: 'div', attribs: {}, children: [
                 { name: 'span', attribs: { className: 'foo' }, children: ['some content'] }
             ]
-        }, 'to satisfy', {
+        }), 'to satisfy', {
             found: true,
             bestMatch: {
                 diff: {
@@ -247,7 +251,7 @@ describe('contains', () => {
     });
 
     it('finds a nested component with missing children and extra attribute', () => {
-        return expect({
+        return expect(createActual({
             name: 'div', attribs: {}, children: [
                 {
                     name: 'span',
@@ -265,7 +269,7 @@ describe('contains', () => {
                     children: [ 'three' ]
                 }
             ]
-        }, 'when checked with options to contain', { diffExtraChildren: false, diffExtraAttributes: false }, {
+        }), 'when checked with options to contain', { diffExtraChildren: false, diffExtraAttributes: false }, createExpected({
             name: 'div', attribs: {}, children: [
                 {
                     name: 'span',
@@ -273,7 +277,7 @@ describe('contains', () => {
                     children: [ 'two' ]
                 }
             ]
-        }, 'to satisfy', {
+        }), 'to satisfy', {
             found: true,
             bestMatch: {
                 weight: 0

@@ -4,20 +4,18 @@ import Diff from '../diff';
 
 const expect = Unexpected.clone();
 
-const TestAdapter = {
-    getName(comp) { return comp.name; },
+import {
+    expectedSymbol,
+    actualSymbol,
+    TestExpectedAdapter,
+    TestActualAdapter,
+    createActual,
+    createExpected
+} from './mockEntities';
 
-    getAttributes(comp) { return comp.attribs; },
-
-    getChildren(comp) {
-        return (comp.children && [].concat([], comp.children)) || [];
-    },
-
-    classAttributeName: 'className'
-};
 
 function getDiff(actual, expected, options) {
-    return Diff.diffElements(TestAdapter, TestAdapter, actual, expected, expect, options);
+    return Diff.diffElements(TestActualAdapter, TestExpectedAdapter, actual, expected, expect, options);
 }
 
 expect.addType({
@@ -50,9 +48,9 @@ describe('diff', () => {
     it('returns no differences for an identical element', () => {
 
         return expect(
-            { name: 'span', attribs: { className: 'foo' }, children: ['some text'] },
+            createActual({ name: 'span', attribs: { className: 'foo' }, children: ['some text'] }),
             'when diffed against',
-            { name: 'span', attribs: { className: 'foo' }, children: ['some text'] },
+            createExpected({ name: 'span', attribs: { className: 'foo' }, children: ['some text'] }),
             'to satisfy',
             {
             diff: {
@@ -64,16 +62,17 @@ describe('diff', () => {
                 ]
             },
             weight: 0
-        });
+        }
+        );
 
     });
 
     it('diffs a changed attribute', () => {
 
         return expect(
-            { name: 'span', attribs: { className: 'foo' }, children: ['some text'] },
+            createActual({ name: 'span', attribs: { className: 'foo' }, children: ['some text'] }),
             'when diffed against',
-            { name: 'span', attribs: { className: 'bar' }, children: ['some text'] },
+            createExpected({ name: 'span', attribs: { className: 'bar' }, children: ['some text'] }),
             'to satisfy',
             {
                 diff: {
@@ -89,37 +88,40 @@ describe('diff', () => {
                     ]
                 },
                 weight: Diff.DefaultWeights.ATTRIBUTE_MISMATCH
-            });
+            }
+        );
     });
 
     it('diffs an extra attribute', () => {
 
 
-        return expect({ name: 'span', attribs: { className: 'foo' }, children: ['some text'] },
+        return expect(
+            createActual({ name: 'span', attribs: { className: 'foo' }, children: ['some text'] }),
             'when diffed against',
-            { name: 'span', attribs: {}, children: ['some text'] },
-            'to satisfy', {
-            diff: {
-                attributes: [
-                    {
-                        name: 'className',
-                        value: 'foo',
-                        diff: {
-                            type: 'extra'
+            createExpected({ name: 'span', attribs: {}, children: ['some text'] }),
+            'to satisfy',
+            {
+                diff: {
+                    attributes: [
+                        {
+                            name: 'className',
+                            value: 'foo',
+                            diff: {
+                                type: 'extra'
+                            }
                         }
-                    }
-                ]
-            },
-            weight: Diff.DefaultWeights.ATTRIBUTE_EXTRA
-        });
+                    ]
+                },
+                weight: Diff.DefaultWeights.ATTRIBUTE_EXTRA
+            }
+        );
     });
 
     it('diffs an extra attribute and a changed attribute', () => {
 
-        return expect({ name: 'span', attribs: { id: 'abc', className: 'foo' }, children: ['some text'] },
-            'when diffed against',
-            { name: 'span', attribs: { id: 'abcd' }, children: ['some text'] },
-            'to satisfy', {
+        return expect(createActual(
+            { name: 'span', attribs: { id: 'abc', className: 'foo' }, children: ['some text'] }
+        ), 'when diffed against', createExpected({ name: 'span', attribs: { id: 'abcd' }, children: ['some text'] }), 'to satisfy', {
             diff: {
                 attributes: [
                     {
@@ -145,147 +147,145 @@ describe('diff', () => {
 
     it('diffs a removed attribute', () => {
 
-        return expect({ name: 'span', attribs: {}, children: ['some text'] },
+        return expect(
+            createActual({ name: 'span', attribs: {}, children: ['some text'] }),
             'when diffed against',
-            { name: 'span', attribs: { className: 'foo' }, children: ['some text'] },
-            'to satisfy', {
-            diff: {
-                attributes: [
-                    {
-                        name: 'className',
-                        diff: {
-                            type: 'missing',
-                            expectedValue: 'foo'
+            createExpected({ name: 'span', attribs: { className: 'foo' }, children: ['some text'] }),
+            'to satisfy',
+            {
+                diff: {
+                    attributes: [
+                        {
+                            name: 'className',
+                            diff: {
+                                type: 'missing',
+                                expectedValue: 'foo'
+                            }
                         }
-                    }
-                ]
-            },
-            weight: Diff.DefaultWeights.ATTRIBUTE_MISSING
-        });
+                    ]
+                },
+                weight: Diff.DefaultWeights.ATTRIBUTE_MISSING
+            }
+        );
     });
 
     it('diffs changed content', () => {
 
-        return expect({ name: 'span', attribs: {}, children: ['some text'] },
+        return expect(
+            createActual({ name: 'span', attribs: {}, children: ['some text'] }),
             'when diffed against',
-            { name: 'span', attribs: {}, children: ['some changed text'] },
-            'to satisfy', {
-            diff: {
-                children: [
-                    {
-                        type: 'CONTENT',
-                        value: 'some text',
-                        diff: {
-                            type: 'changed',
-                            expectedValue: 'some changed text'
+            createExpected({ name: 'span', attribs: {}, children: ['some changed text'] }),
+            'to satisfy',
+            {
+                diff: {
+                    children: [
+                        {
+                            type: 'CONTENT',
+                            value: 'some text',
+                            diff: {
+                                type: 'changed',
+                                expectedValue: 'some changed text'
+                            }
                         }
-                    }
-                ]
-            },
-            weight: Diff.DefaultWeights.STRING_CONTENT_MISMATCH
-        });
+                    ]
+                },
+                weight: Diff.DefaultWeights.STRING_CONTENT_MISMATCH
+            }
+        );
     });
 
     it('diffs a removed last child', () => {
 
-        return expect({ name: 'span', attribs: {}, children: [
+        return expect(createActual({ name: 'span', attribs: {}, children: [
                 { name: 'child', attribs: {}, children: ['child1'] },
                 { name: 'child', attribs: {}, children: ['child2'] }
-            ] },
-            'when diffed against',
-            { name: 'span', attribs: {}, children: [
-                { name: 'child', attribs: {}, children: ['child1'] },
-                { name: 'child', attribs: {}, children: ['child2'] },
-                { name: 'child', attribs: {}, children: ['child3'] }
-            ] },
-            'to satisfy',
-            {
-                diff: {
-                    children: [
-                        {
-                            type: 'ELEMENT',
-                            name: 'child',
-                            children: [{
-                                type: 'CONTENT',
-                                value: 'child1'
-                            }]
+            ] }), 'when diffed against', createExpected({ name: 'span', attribs: {}, children: [
+            { name: 'child', attribs: {}, children: ['child1'] },
+            { name: 'child', attribs: {}, children: ['child2'] },
+            { name: 'child', attribs: {}, children: ['child3'] }
+        ] }), 'to satisfy', {
+            diff: {
+                children: [
+                    {
+                        type: 'ELEMENT',
+                        name: 'child',
+                        children: [{
+                            type: 'CONTENT',
+                            value: 'child1'
+                        }]
+                    },
+                    {
+                        type: 'ELEMENT',
+                        name: 'child',
+                        children: [{
+                            type: 'CONTENT',
+                            value: 'child2'
+                        }]
+                    },
+                    {
+                        type: 'ELEMENT',
+                        name: 'child',
+                        diff: {
+                            type: 'missing'
                         },
-                        {
-                            type: 'ELEMENT',
-                            name: 'child',
-                            children: [{
-                                type: 'CONTENT',
-                                value: 'child2'
-                            }]
-                        },
-                        {
-                            type: 'ELEMENT',
-                            name: 'child',
-                            diff: {
-                                type: 'missing'
-                            },
-                            children: [{
-                                type: 'CONTENT',
-                                value: 'child3'
-                            }]
-                        }
-                    ]
-                },
-                weight: Diff.DefaultWeights.CHILD_MISSING
-        });
+                        children: [{
+                            type: 'CONTENT',
+                            value: 'child3'
+                        }]
+                    }
+                ]
+            },
+            weight: Diff.DefaultWeights.CHILD_MISSING
+    });
     });
 
     it('diffs a removed middle child', () => {
-        return expect({
+        return expect(createActual({
                 name: 'span', attribs: {}, children: [
                     { name: 'child', attribs: {}, children: ['child1'] },
                     { name: 'child', attribs: {}, children: ['child3'] }
                 ]
-            },
-            'when diffed against',
-            {
-                name: 'span', attribs: {}, children: [
-                { name: 'child', attribs: {}, children: ['child1'] },
-                { name: 'child', attribs: {}, children: ['child2'] },
-                { name: 'child', attribs: {}, children: ['child3'] }
-            ]
-            },
-            'to satisfy',
-            {
-                diff: {
-                    children: [
-                        {
-                            type: 'ELEMENT',
-                            name: 'child',
-                            children: [{
-                                type: 'CONTENT',
-                                value: 'child1'
-                            }]
+            }), 'when diffed against', createExpected({
+            name: 'span', attribs: {}, children: [
+            { name: 'child', attribs: {}, children: ['child1'] },
+            { name: 'child', attribs: {}, children: ['child2'] },
+            { name: 'child', attribs: {}, children: ['child3'] }
+        ]
+        }), 'to satisfy', {
+            diff: {
+                children: [
+                    {
+                        type: 'ELEMENT',
+                        name: 'child',
+                        children: [{
+                            type: 'CONTENT',
+                            value: 'child1'
+                        }]
+                    },
+                    {
+                        type: 'ELEMENT',
+                        name: 'child',
+                        diff: {
+                            type: 'missing',
                         },
-                        {
-                            type: 'ELEMENT',
-                            name: 'child',
-                            diff: {
-                                type: 'missing',
-                            },
-                            children: [{
-                                type: 'CONTENT',
-                                value: 'child2'
-                            }]
-                        },
-                        {
-                            type: 'ELEMENT',
-                            name: 'child',
-                            diff: undefined,
-                            children: [{
-                                type: 'CONTENT',
-                                value: 'child3'
-                            }]
-                        }
-                    ]
-                },
-                weight: Diff.DefaultWeights.CHILD_MISSING
-            });
+                        children: [{
+                            type: 'CONTENT',
+                            value: 'child2'
+                        }]
+                    },
+                    {
+                        type: 'ELEMENT',
+                        name: 'child',
+                        diff: undefined,
+                        children: [{
+                            type: 'CONTENT',
+                            value: 'child3'
+                        }]
+                    }
+                ]
+            },
+            weight: Diff.DefaultWeights.CHILD_MISSING
+        });
 
 
 
@@ -293,14 +293,14 @@ describe('diff', () => {
     });
 
     it('diffs an extra last child', () => {
-        return expect({ name: 'span', attribs: {}, children: [
+        return expect(createActual({ name: 'span', attribs: {}, children: [
             { name: 'child', attribs: {}, children: ['child1'] },
             { name: 'child', attribs: {}, children: ['child2'] },
             { name: 'child', attribs: {}, children: ['child3'] }
-        ] }, 'when diffed against', { name: 'span', attribs: {}, children: [
+        ] }), 'when diffed against', createExpected({ name: 'span', attribs: {}, children: [
             { name: 'child', attribs: {}, children: ['child1'] },
             { name: 'child', attribs: {}, children: ['child2'] }
-        ] }, 'to satisfy', {
+        ] }), 'to satisfy', {
             diff: {
                 children: [
                     {
@@ -338,14 +338,14 @@ describe('diff', () => {
 
     it('diffs an extra middle child', () => {
         // See comments in 'diffs a removed middle child' as to why this isn't an ideal diff
-        return expect({ name: 'span', attribs: {}, children: [
+        return expect(createActual({ name: 'span', attribs: {}, children: [
             { name: 'child', attribs: {}, children: ['child1'] },
             { name: 'child', attribs: {}, children: ['child2'] },
             { name: 'child', attribs: {}, children: ['child3'] }
-        ] }, 'when diffed against', { name: 'span', attribs: {}, children: [
+        ] }), 'when diffed against', createExpected({ name: 'span', attribs: {}, children: [
             { name: 'child', attribs: {}, children: ['child1'] },
             { name: 'child', attribs: {}, children: ['child3'] }
-        ] }, 'to satisfy', {
+        ] }), 'to satisfy', {
             diff: {
                 children: [
                     {
@@ -383,15 +383,15 @@ describe('diff', () => {
     });
 
     it('diffs a changed middle child', () => {
-        return expect({ name: 'span', attribs: {}, children: [
+        return expect(createActual({ name: 'span', attribs: {}, children: [
             { name: 'child', attribs: {}, children: ['child1'] },
             { name: 'child', attribs: {}, children: ['child2 changed'] },
             { name: 'child', attribs: {}, children: ['child3'] }
-        ] }, 'when diffed against', { name: 'span', attribs: {}, children: [
+        ] }), 'when diffed against', createExpected({ name: 'span', attribs: {}, children: [
             { name: 'child', attribs: {}, children: ['child1'] },
             { name: 'child', attribs: {}, children: ['child2'] },
             { name: 'child', attribs: {}, children: ['child3'] }
-        ] }, 'to satisfy', {
+        ] }), 'to satisfy', {
             diff: {
                 children: [
                     {
@@ -431,9 +431,9 @@ describe('diff', () => {
 
     it('diffs a missing content entry', () => {
         // See comments in 'diffs a removed middle child' as to why this isn't an ideal diff
-        return expect({ name: 'span', attribs: {}, children: [
-            'child1', 'child3'] }, 'when diffed against', { name: 'span', attribs: {}, children: [
-            'child1', 'child2', 'child3'] }, 'to satisfy', {
+        return expect(createActual({ name: 'span', attribs: {}, children: [
+            'child1', 'child3'] }), 'when diffed against', createExpected({ name: 'span', attribs: {}, children: [
+            'child1', 'child2', 'child3'] }), 'to satisfy', {
             diff: {
                 children: [
                     {
@@ -459,9 +459,9 @@ describe('diff', () => {
 
     it('diffs an extra content entry', () => {
         // See comments in 'diffs a removed middle child' as to why this isn't an ideal diff
-        return expect({ name: 'span', attribs: {}, children: [
-            'child1', 'child2', 'child3'] }, 'when diffed against', { name: 'span', attribs: {}, children: [
-            'child1', 'child3'] }, 'to satisfy', {
+        return expect(createActual({ name: 'span', attribs: {}, children: [
+            'child1', 'child2', 'child3'] }), 'when diffed against', createExpected({ name: 'span', attribs: {}, children: [
+            'child1', 'child3'] }), 'to satisfy', {
             diff: {
                 children: [
                     {
@@ -487,9 +487,9 @@ describe('diff', () => {
 
     it('diffs a changed element name', () => {
         return expect(
-            { name: 'span', attribs: { className: 'foo' }, children: ['some text'] },
+            createActual({ name: 'span', attribs: { className: 'foo' }, children: ['some text'] }),
             'when diffed against',
-            { name: 'div', attribs: { className: 'foo' }, children: ['some text'] },
+            createExpected({ name: 'div', attribs: { className: 'foo' }, children: ['some text'] }),
             'to satisfy',
             {
                 diff: {
@@ -513,7 +513,7 @@ describe('diff', () => {
         return expect(
             'some content',
             'when diffed against',
-            { name: 'div', attribs: { className: 'foo' }, children: ['some text'] },
+            createExpected({ name: 'div', attribs: { className: 'foo' }, children: ['some text'] }),
             'to satisfy',
             {
                 diff: {
@@ -538,7 +538,7 @@ describe('diff', () => {
 
     it('diffs a element-should-be-content', () => {
         return expect(
-            { name: 'div', attribs: { className: 'foo' }, children: ['some text'] },
+            createActual({ name: 'div', attribs: { className: 'foo' }, children: ['some text'] }),
             'when diffed with options against',
             {
                 weights: { NATIVE_NONNATIVE_MISMATCH: 1 }  // Need to fool the weight to force this, otherwise it's a wrapper
@@ -569,13 +569,13 @@ describe('diff', () => {
     });
 
     it('diffs a wrapper around a single child', () => {
-        return expect({ name: 'div', attribs: { className: 'foo' }, children: [
+        return expect(createActual({ name: 'div', attribs: { className: 'foo' }, children: [
             { name: 'wrapper', attribs: { className: 'the-wrapper' }, children: [
                 { name: 'real', attribs: { className: 'real-element' } }
             ] }
-        ] }, 'when diffed against', { name: 'div', attribs: { className: 'foo' }, children: [
+        ] }), 'when diffed against', createExpected({ name: 'div', attribs: { className: 'foo' }, children: [
             { name: 'real', attribs: { className: 'real-element' } }
-        ] }, 'to satisfy', {
+        ] }), 'to satisfy', {
             diff: {
                 type: 'ELEMENT',
                 name: 'div',
@@ -602,13 +602,13 @@ describe('diff', () => {
     });
 
     it('diffs a wrapper around a single child', () => {
-        return expect({ name: 'div', attribs: { className: 'foo' }, children: [
+        return expect(createActual({ name: 'div', attribs: { className: 'foo' }, children: [
             { name: 'wrapper', attribs: { className: 'the-wrapper' }, children: [
                 { name: 'real', attribs: { className: 'real-element' } }
             ] }
-        ] }, 'when diffed against', { name: 'div', attribs: { className: 'foo' }, children: [
+        ] }), 'when diffed against', createExpected({ name: 'div', attribs: { className: 'foo' }, children: [
             { name: 'real', attribs: { className: 'real-element' } }
-        ] }, 'to satisfy', {
+        ] }), 'to satisfy', {
             diff: {
                 type: 'ELEMENT',
                 name: 'div',
@@ -635,17 +635,17 @@ describe('diff', () => {
     });
 
     it('diffs a wrapper around multiple children', () => {
-        return expect({ name: 'div', attribs: { className: 'foo' }, children: [
+        return expect(createActual({ name: 'div', attribs: { className: 'foo' }, children: [
             { name: 'wrapper', attribs: { className: 'the-wrapper' }, children: [
                 { name: 'real', attribs: { className: 'real-element-1' } },
                 { name: 'real', attribs: { className: 'real-element-2' } },
                 { name: 'real', attribs: { className: 'real-element-3' } }
             ] }
-        ] }, 'when diffed against', { name: 'div', attribs: { className: 'foo' }, children: [
+        ] }), 'when diffed against', createExpected({ name: 'div', attribs: { className: 'foo' }, children: [
             { name: 'real', attribs: { className: 'real-element-1' } },
             { name: 'real', attribs: { className: 'real-element-2' } },
             { name: 'real', attribs: { className: 'real-element-3' } }
-        ] }, 'to satisfy', {
+        ] }), 'to satisfy', {
             diff: {
                 type: 'ELEMENT',
                 name: 'div',
@@ -670,7 +670,7 @@ describe('diff', () => {
     });
 
     it('diffs a wrapper around each of several children', () => {
-        return expect({ name: 'div', attribs: { className: 'foo' }, children: [
+        return expect(createActual({ name: 'div', attribs: { className: 'foo' }, children: [
             { name: 'wrapper', attribs: { className: 'the-wrapper-1' }, children: [
                 { name: 'real', attribs: { className: 'real-element-1' } }
             ]
@@ -683,11 +683,11 @@ describe('diff', () => {
                 { name: 'real', attribs: { className: 'real-element-3' } }
             ]
             }
-        ] }, 'when diffed against', { name: 'div', attribs: { className: 'foo' }, children: [
+        ] }), 'when diffed against', createExpected({ name: 'div', attribs: { className: 'foo' }, children: [
             { name: 'real', attribs: { className: 'real-element-1' } },
             { name: 'real', attribs: { className: 'real-element-2' } },
             { name: 'real', attribs: { className: 'real-element-3' } }
-        ] }, 'to satisfy', {
+        ] }), 'to satisfy', {
             diff: {
                 type: 'ELEMENT',
                 name: 'div',
@@ -733,15 +733,15 @@ describe('diff', () => {
     });
 
     it('diffs a simple wrapper with diffWrappers:false', () => {
-        return expect({ name: 'div', attribs: { className: 'foo' }, children: [
+        return expect(createActual({ name: 'div', attribs: { className: 'foo' }, children: [
             { name: 'wrapper', attribs: { className: 'the-wrapper' }, children: [
                 { name: 'real', attribs: { className: 'real-element' } }
             ] }
-        ] }, 'when diffed with options against', {
+        ] }), 'when diffed with options against', {
             diffWrappers: false
-        }, { name: 'div', attribs: { className: 'foo' }, children: [
+        }, createExpected({ name: 'div', attribs: { className: 'foo' }, children: [
             { name: 'real', attribs: { className: 'real-element' } }
-        ] }, 'to satisfy', {
+        ] }), 'to satisfy', {
             diff: {
                 type: 'ELEMENT',
                 name: 'div',
@@ -766,17 +766,17 @@ describe('diff', () => {
 
 
     it('diffs a wrapper around multiple children with diffWrappers:false', () => {
-        return expect({ name: 'div', attribs: { className: 'foo' }, children: [
+        return expect(createActual({ name: 'div', attribs: { className: 'foo' }, children: [
             { name: 'wrapper', attribs: { className: 'the-wrapper' }, children: [
                 { name: 'real', attribs: { className: 'real-element-1' } },
                 { name: 'real', attribs: { className: 'real-element-2' } },
                 { name: 'real', attribs: { className: 'real-element-3' } }
             ] }
-        ] }, 'when diffed with options against', { diffWrappers: false }, { name: 'div', attribs: { className: 'foo' }, children: [
+        ] }), 'when diffed with options against', { diffWrappers: false }, createExpected({ name: 'div', attribs: { className: 'foo' }, children: [
             { name: 'real', attribs: { className: 'real-element-1' } },
             { name: 'real', attribs: { className: 'real-element-2' } },
             { name: 'real', attribs: { className: 'real-element-3' } }
-        ] }, 'to satisfy', {
+        ] }), 'to satisfy', {
             diff: {
                 type: 'ELEMENT',
                 name: 'div',
@@ -810,7 +810,7 @@ describe('diff', () => {
     });
 
     it('diffs a wrapper around each of several children with diffWrappers:false', () => {
-        return expect({ name: 'div', attribs: { className: 'foo' }, children: [
+        return expect(createActual({ name: 'div', attribs: { className: 'foo' }, children: [
             { name: 'wrapper', attribs: { className: 'the-wrapper-1' }, children: [
                 { name: 'real', attribs: { className: 'real-element-1' } }
             ]
@@ -823,11 +823,11 @@ describe('diff', () => {
                 { name: 'real', attribs: { className: 'real-element-3' } }
             ]
             }
-        ] }, 'when diffed with options against', { diffWrappers: false }, { name: 'div', attribs: { className: 'foo' }, children: [
+        ] }), 'when diffed with options against', { diffWrappers: false }, createExpected({ name: 'div', attribs: { className: 'foo' }, children: [
             { name: 'real', attribs: { className: 'real-element-1' } },
             { name: 'real', attribs: { className: 'real-element-2' } },
             { name: 'real', attribs: { className: 'real-element-3' } }
-        ] }, 'to satisfy', {
+        ] }), 'to satisfy', {
             diff: {
                 type: 'ELEMENT',
                 name: 'div',
@@ -876,19 +876,19 @@ describe('diff', () => {
     });
 
     it('ignores a top level wrapper with diffWrappers:false', () => {
-        return expect({
+        return expect(createActual({
             name: 'TopLevel', attribs: {}, children: [
                 { name: 'MidLevel', attribs: {}, children: [
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
                 ] }
             ]
-        }, 'when diffed with options against', { diffWrappers: false }, {
+        }), 'when diffed with options against', { diffWrappers: false }, createExpected({
             name: 'MidLevel', attribs: {}, children: [
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
             ]
-        }, 'to satisfy', {
+        }), 'to satisfy', {
             diff: {
                 type: 'WRAPPERELEMENT',
                 name: 'TopLevel',
@@ -905,7 +905,7 @@ describe('diff', () => {
     });
 
     it('ignores two levels of wrapper with diffWrappers:false', () => {
-        return expect({
+        return expect(createActual({
             name: 'HigherOrderTopLevel', attribs: { id: 'main' }, children: [
                 {
                     name: 'TopLevel', attribs: {}, children: [
@@ -916,12 +916,12 @@ describe('diff', () => {
                 ]
                 }
             ]
-        }, 'when diffed with options against', { diffWrappers: false }, {
+        }), 'when diffed with options against', { diffWrappers: false }, createExpected({
             name: 'MidLevel', attribs: {}, children: [
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
             ]
-        }, 'to satisfy', {
+        }), 'to satisfy', {
             diff: {
                 type: 'WRAPPERELEMENT',
                 name: 'HigherOrderTopLevel',
@@ -946,14 +946,14 @@ describe('diff', () => {
     });
 
     it('ignores missing children if diffMissingChildren:false', () => {
-        return expect({ name: 'span', attribs: {}, children: [
+        return expect(createActual({ name: 'span', attribs: {}, children: [
             { name: 'child', attribs: {}, children: ['child1'] },
             { name: 'child', attribs: {}, children: ['child2'] }
-        ] }, 'when diffed with options against', { diffMissingChildren: false }, { name: 'span', attribs: {}, children: [
+        ] }), 'when diffed with options against', { diffMissingChildren: false }, createExpected({ name: 'span', attribs: {}, children: [
             { name: 'child', attribs: {}, children: ['child1'] },
             { name: 'child', attribs: {}, children: ['child2'] },
             { name: 'child', attribs: {}, children: ['child3'] }
-        ] }, 'to satisfy', {
+        ] }), 'to satisfy', {
             diff: {
                 children: expect.it('to have length', 2)
             },
@@ -962,14 +962,14 @@ describe('diff', () => {
     });
 
     it('ignores extra children if diffExtraChildren:false', () => {
-        return expect({ name: 'span', attribs: {}, children: [
+        return expect(createActual({ name: 'span', attribs: {}, children: [
             { name: 'child', attribs: {}, children: ['child1'] },
             { name: 'child', attribs: {}, children: ['child2'] },
             { name: 'child', attribs: {}, children: ['child3'] }
-        ] }, 'when diffed with options against', { diffExtraChildren: false }, { name: 'span', attribs: {}, children: [
+        ] }), 'when diffed with options against', { diffExtraChildren: false }, createExpected({ name: 'span', attribs: {}, children: [
             { name: 'child', attribs: {}, children: ['child1'] },
             { name: 'child', attribs: {}, children: ['child2'] }
-        ] }, 'to satisfy', {
+        ] }), 'to satisfy', {
             diff: {
                 children: [
                     { },
@@ -990,20 +990,20 @@ describe('diff', () => {
     });
 
     it('ignores missing attributes if diffRemovedAttributes:false', () => {
-        return expect({
+        return expect(createActual({
             name: 'span',
             attribs: {
                 id: 'bar'
             },
             children: []
-        }, 'when diffed with options against', { diffRemovedAttributes: false }, {
+        }), 'when diffed with options against', { diffRemovedAttributes: false }, createExpected({
             name: 'span',
             attribs: {
                 className: 'foo',
                 id: 'bar'
             },
             children: []
-        }, 'to satisfy', {
+        }), 'to satisfy', {
             diff: {
                 type: 'ELEMENT',
                 name: 'span',
@@ -1014,20 +1014,20 @@ describe('diff', () => {
     });
 
     it('ignores extra attributes if diffExtraAttributes:false', () => {
-        return expect({
+        return expect(createActual({
             name: 'span',
             attribs: {
                 className: 'foo',
                 id: 'bar'
             },
             children: []
-        }, 'when diffed with options against', { diffExtraAttributes: false }, {
+        }), 'when diffed with options against', { diffExtraAttributes: false }, createExpected({
             name: 'span',
             attribs: {
                 id: 'bar'
             },
             children: []
-        }, 'to satisfy', {
+        }), 'to satisfy', {
             diff: {
                 type: 'ELEMENT',
                 name: 'span',
@@ -1041,20 +1041,20 @@ describe('diff', () => {
     });
 
     it('treats undefined attributes as not defined', () => {
-        return expect({
+        return expect(createActual({
             name: 'span',
             attribs: {
                 id: 'bar',
                 className: undefined
             },
             children: []
-        }, 'when diffed with options against', { diffExtraAttributes: true }, {
+        }), 'when diffed with options against', { diffExtraAttributes: true }, createExpected({
             name: 'span',
             attribs: {
                 id: 'bar'
             },
             children: []
-        }, 'to satisfy', {
+        }), 'to satisfy', {
             diff: {
                 type: 'ELEMENT',
                 name: 'span',
@@ -1069,20 +1069,20 @@ describe('diff', () => {
     });
 
     it('treats null attributes as defined', () => {
-        return expect({
+        return expect(createActual({
             name: 'span',
             attribs: {
                 id: 'bar',
                 className: null
             },
             children: []
-        }, 'when diffed with options against', { diffExtraAttributes: true }, {
+        }), 'when diffed with options against', { diffExtraAttributes: true }, createExpected({
             name: 'span',
             attribs: {
                 id: 'bar'
             },
             children: []
-        }, 'to satisfy', {
+        }), 'to satisfy', {
             diff: {
                 type: 'ELEMENT',
                 name: 'span',
@@ -1096,19 +1096,19 @@ describe('diff', () => {
     });
 
     it("doesn't wrap an element when it means there are missing children", () => {
-        return expect({
+        return expect(createActual({
             name: 'SomeElement',
             attribs: {},
             children: [
                 { name: 'ThisIsNotAWrapper', attribs: {}, children: [] }
             ]
-        }, 'when diffed with options against', { diffWrappers: false }, {
+        }), 'when diffed with options against', { diffWrappers: false }, createExpected({
             name: 'SomeElement',
             attribs: {},
             children: [
                 { name: 'ExpectedElement', attribs: {}, children: [] }
             ]
-        }, 'to satisfy', {
+        }), 'to satisfy', {
             diff: {
                 type: 'ELEMENT',
                 name: 'SomeElement',
@@ -1130,17 +1130,17 @@ describe('diff', () => {
     });
 
     it('diffs extra children when the expected has no children but wrappers are allowed', () => {
-        return expect({
+        return expect(createActual({
             name: 'SomeElement',
             attribs: {},
             children: [
                 { name: 'div', attribs: {}, children: [] }
             ]
-        }, 'when diffed with options against', { diffWrappers: false }, {
+        }), 'when diffed with options against', { diffWrappers: false }, createExpected({
             name: 'SomeElement',
             attribs: {},
             children: []
-        }, 'to satisfy', {
+        }), 'to satisfy', {
             diff: {
                 type: 'ELEMENT',
                 name: 'SomeElement',
@@ -1160,18 +1160,18 @@ describe('diff', () => {
     describe('expect.it', () => {
 
         it('accepts a passing expect.it attribute assertion', () => {
-            return expect({
+            return expect(createActual({
                 type: 'ELEMENT',
                 name: 'SomeElement',
                 attribs: {
                     className: 'abcde'
                 }
-            }, 'when diffed against', {
+            }), 'when diffed against', createExpected({
                 name: 'SomeElement',
                 attribs: {
                     className: expect.it('to match', /[a-e]+$/)
                 }
-            }, 'to satisfy', {
+            }), 'to satisfy', {
                 diff: {
                     type: 'ELEMENT',
                     name: 'SomeElement',
@@ -1185,18 +1185,18 @@ describe('diff', () => {
         });
 
         it('diffs an expect.it attribute assertion', () => {
-            return expect({
+            return expect(createActual({
                 type: 'ELEMENT',
                 name: 'SomeElement',
                 attribs: {
                     className: 'abcde'
                 }
-            }, 'when diffed against', {
+            }), 'when diffed against', createExpected({
                 name: 'SomeElement',
                 attribs: {
                     className: expect.it('to match', /[a-d]+$/)
                 }
-            }, 'to satisfy', {
+            }), 'to satisfy', {
                 diff: {
                     type: 'ELEMENT',
                     name: 'SomeElement',
@@ -1214,16 +1214,16 @@ describe('diff', () => {
         });
 
         it('diffs an expect.it content assertion', () => {
-            return expect({
+            return expect(createActual({
                 type: 'ELEMENT',
                 name: 'SomeElement',
                 attribs: {},
                 children: [ 'abcde' ]
-            }, 'when diffed against', {
+            }), 'when diffed against', createExpected({
                 name: 'SomeElement',
                 attribs: {},
                 children: [expect.it('to match', /[a-d]+$/) ]
-            }, 'to satisfy', {
+            }), 'to satisfy', {
                 diff: {
                     type: 'ELEMENT',
                     name: 'SomeElement',
@@ -1243,16 +1243,16 @@ describe('diff', () => {
         });
 
         it('returns a CONTENT type for a passed content assertion', () => {
-            return expect({
+            return expect(createActual({
                 type: 'ELEMENT',
                 name: 'SomeElement',
                 attribs: {},
                 children: [ 'abcd' ]
-            }, 'when diffed against', {
+            }), 'when diffed against', createExpected({
                 name: 'SomeElement',
                 attribs: {},
                 children: [expect.it('to match', /[a-d]+$/) ]
-            }, 'to satisfy', {
+            }), 'to satisfy', {
                 diff: {
                     type: 'ELEMENT',
                     name: 'SomeElement',
@@ -1271,19 +1271,17 @@ describe('diff', () => {
 
         it('matches a className with diffExactClasses:true', () => {
 
-            return expect({
+            return expect(createActual({
                 type: 'ELEMENT',
                 name:'SomeElement',
                 attribs: { className: 'one three two' },
                 children: []
-            }, 'when diffed with options against', { diffExactClasses: true },
-                {
-                type: 'ELEMENT',
-                name:'SomeElement',
-                attribs: { className: 'one two three' },
-                children: []
-            },
-            'to satisfy', {
+            }), 'when diffed with options against', { diffExactClasses: true }, createExpected({
+            type: 'ELEMENT',
+            name:'SomeElement',
+            attribs: { className: 'one two three' },
+            children: []
+        }), 'to satisfy', {
                     diff: {
                         type: 'ELEMENT',
                         attributes: [
@@ -1303,19 +1301,17 @@ describe('diff', () => {
 
             it('ignores className order', () => {
 
-                return expect({
+                return expect(createActual({
                         type: 'ELEMENT',
                         name:'SomeElement',
                         attribs: { className: 'one three two' },
                         children: []
-                    }, 'when diffed with options against', { diffExactClasses: false },
-                    {
-                        type: 'ELEMENT',
-                        name:'SomeElement',
-                        attribs: { className: 'one two three' },
-                        children: []
-                    },
-                    'to satisfy', {
+                    }), 'when diffed with options against', { diffExactClasses: false }, createExpected({
+                    type: 'ELEMENT',
+                    name:'SomeElement',
+                    attribs: { className: 'one two three' },
+                    children: []
+                }), 'to satisfy', {
                         diff: {
                             type: 'ELEMENT',
                             attributes: [
@@ -1332,19 +1328,17 @@ describe('diff', () => {
 
             it('identifies an extra class', () => {
 
-                return expect({
+                return expect(createActual({
                         type: 'ELEMENT',
                         name:'SomeElement',
                         attribs: { className: 'one three two' },
                         children: []
-                    }, 'when diffed with options against', { diffExactClasses: false },
-                    {
-                        type: 'ELEMENT',
-                        name:'SomeElement',
-                        attribs: { className: 'two one' },
-                        children: []
-                    },
-                    'to satisfy', {
+                    }), 'when diffed with options against', { diffExactClasses: false }, createExpected({
+                    type: 'ELEMENT',
+                    name:'SomeElement',
+                    attribs: { className: 'two one' },
+                    children: []
+                }), 'to satisfy', {
                         diff: {
                             type: 'ELEMENT',
                             attributes: [
@@ -1364,19 +1358,17 @@ describe('diff', () => {
 
             it('identifies a missing class', () => {
 
-                return expect({
+                return expect(createActual({
                         type: 'ELEMENT',
                         name:'SomeElement',
                         attribs: { className: 'one two' },
                         children: []
-                    }, 'when diffed with options against', { diffExactClasses: false },
-                    {
-                        type: 'ELEMENT',
-                        name:'SomeElement',
-                        attribs: { className: 'three two one' },
-                        children: []
-                    },
-                    'to satisfy', {
+                    }), 'when diffed with options against', { diffExactClasses: false }, createExpected({
+                    type: 'ELEMENT',
+                    name:'SomeElement',
+                    attribs: { className: 'three two one' },
+                    children: []
+                }), 'to satisfy', {
                         diff: {
                             type: 'ELEMENT',
                             attributes: [
@@ -1396,19 +1388,17 @@ describe('diff', () => {
 
             it('ignores extra spaces in the class list', () => {
 
-                return expect({
+                return expect(createActual({
                         type: 'ELEMENT',
                         name:'SomeElement',
                         attribs: { className: ' one two  ' },
                         children: []
-                    }, 'when diffed with options against', { diffExactClasses: false },
-                    {
-                        type: 'ELEMENT',
-                        name:'SomeElement',
-                        attribs: { className: 'three two one' },
-                        children: []
-                    },
-                    'to satisfy', {
+                    }), 'when diffed with options against', { diffExactClasses: false }, createExpected({
+                    type: 'ELEMENT',
+                    name:'SomeElement',
+                    attribs: { className: 'three two one' },
+                    children: []
+                }), 'to satisfy', {
                         diff: {
                             type: 'ELEMENT',
                             attributes: [
@@ -1429,19 +1419,17 @@ describe('diff', () => {
 
             it('identifies a different class name', () => {
 
-                return expect({
+                return expect(createActual({
                         type: 'ELEMENT',
                         name:'SomeElement',
                         attribs: { className: 'one cheese two' },
                         children: []
-                    }, 'when diffed with options against', { diffExactClasses: false },
-                    {
-                        type: 'ELEMENT',
-                        name:'SomeElement',
-                        attribs: { className: 'three two one' },
-                        children: []
-                    },
-                    'to satisfy', {
+                    }), 'when diffed with options against', { diffExactClasses: false }, createExpected({
+                    type: 'ELEMENT',
+                    name:'SomeElement',
+                    attribs: { className: 'three two one' },
+                    children: []
+                }), 'to satisfy', {
                         diff: {
                             type: 'ELEMENT',
                             attributes: [
@@ -1463,19 +1451,17 @@ describe('diff', () => {
 
             it('identifies a single different class name', () => {
 
-                return expect({
+                return expect(createActual({
                         type: 'ELEMENT',
                         name:'SomeElement',
                         attribs: { className: 'foo' },
                         children: []
-                    }, 'when diffed with options against', { diffExactClasses: false },
-                    {
-                        type: 'ELEMENT',
-                        name:'SomeElement',
-                        attribs: { className: 'foob' },
-                        children: []
-                    },
-                    'to satisfy', {
+                    }), 'when diffed with options against', { diffExactClasses: false }, createExpected({
+                    type: 'ELEMENT',
+                    name:'SomeElement',
+                    attribs: { className: 'foob' },
+                    children: []
+                }), 'to satisfy', {
                         diff: {
                             type: 'ELEMENT',
                             attributes: [
@@ -1497,19 +1483,17 @@ describe('diff', () => {
 
             it('ignores an extra class when diffExtraClasses is false', () => {
 
-                return expect({
+                return expect(createActual({
                         type: 'ELEMENT',
                         name:'SomeElement',
                         attribs: { className: 'one three two' },
                         children: []
-                    }, 'when diffed with options against', { diffExactClasses: false, diffExtraClasses: false },
-                    {
-                        type: 'ELEMENT',
-                        name:'SomeElement',
-                        attribs: { className: 'two one' },
-                        children: []
-                    },
-                    'to satisfy', {
+                    }), 'when diffed with options against', { diffExactClasses: false, diffExtraClasses: false }, createExpected({
+                    type: 'ELEMENT',
+                    name:'SomeElement',
+                    attribs: { className: 'two one' },
+                    children: []
+                }), 'to satisfy', {
                         diff: {
                             type: 'ELEMENT',
                             attributes: [
@@ -1526,19 +1510,17 @@ describe('diff', () => {
 
             it('identifies a missing class when diffExtraClasses is false', () => {
 
-                return expect({
+                return expect(createActual({
                         type: 'ELEMENT',
                         name:'SomeElement',
                         attribs: { className: 'two one' },
                         children: []
-                    }, 'when diffed with options against', { diffExactClasses: false, diffExtraClasses: false },
-                    {
-                        type: 'ELEMENT',
-                        name:'SomeElement',
-                        attribs: { className: 'xtra two' },
-                        children: []
-                    },
-                    'to satisfy', {
+                    }), 'when diffed with options against', { diffExactClasses: false, diffExtraClasses: false }, createExpected({
+                    type: 'ELEMENT',
+                    name:'SomeElement',
+                    attribs: { className: 'xtra two' },
+                    children: []
+                }), 'to satisfy', {
                         diff: {
                             type: 'ELEMENT',
                             attributes: [
@@ -1558,19 +1540,17 @@ describe('diff', () => {
 
             it('ignores a missing class when diffMissingClasses is false', () => {
 
-                return expect({
+                return expect(createActual({
                         type: 'ELEMENT',
                         name:'SomeElement',
                         attribs: { className: 'one two' },
                         children: []
-                    }, 'when diffed with options against', { diffExactClasses: false, diffMissingClasses: false },
-                    {
-                        type: 'ELEMENT',
-                        name:'SomeElement',
-                        attribs: { className: 'three two one' },
-                        children: []
-                    },
-                    'to satisfy', {
+                    }), 'when diffed with options against', { diffExactClasses: false, diffMissingClasses: false }, createExpected({
+                    type: 'ELEMENT',
+                    name:'SomeElement',
+                    attribs: { className: 'three two one' },
+                    children: []
+                }), 'to satisfy', {
                         diff: {
                             type: 'ELEMENT',
                             attributes: [
