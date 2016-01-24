@@ -27,4 +27,9 @@ order is unimportant, and optionally extra and/or missing classes can be ignored
 ### v0.4.1
 * Fix for undefined attributes in actual being treated as "extra" attributes
 
+### v0.5.0
+* Improved output for moved elements in children - provides a hint as to the current index
+* Fix for moved elements when actual and expected adapters are different (bruderstein/unexpected-react#9) 
+(thanks to @yormi for an excellent bug report!)
+
 
