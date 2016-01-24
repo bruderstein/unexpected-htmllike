@@ -305,7 +305,7 @@ describe('contains', () => {
     });
 
     it('finds a nested component with missing children and extra attribute (async)', () => {
-        return expect({
+        return expect(createActual({
             name: 'div', attribs: {}, children: [
                 {
                     name: 'span',
@@ -323,7 +323,7 @@ describe('contains', () => {
                     children: [ 'three' ]
                 }
             ]
-        }, 'when checked with options to contain', { diffExtraChildren: false, diffExtraAttributes: false }, {
+        }), 'when checked with options to contain', { diffExtraChildren: false, diffExtraAttributes: false }, createExpected({
             name: 'div', attribs: {}, children: [
                 {
                     name: 'span',
@@ -331,7 +331,7 @@ describe('contains', () => {
                     children: [ expect.it('to eventually equal', 'two') ]
                 }
             ]
-        }, 'to satisfy', {
+        }), 'to satisfy', {
             found: true,
             bestMatch: {
                 weight: 0
