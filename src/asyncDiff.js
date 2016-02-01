@@ -308,9 +308,13 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
     const promises = [];
 
     return expect.promise((resolve, reject) => {
+        const cachedDiffs = {};
         ArrayChangesAsync(actualChildren, expectedChildren,
             function (a, b, aIndex, bIndex, callback) {
+
                 diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options).then(elementDiff => {
+                    cachedDiffs[aIndex] = cachedDiffs[aIndex] || {};
+                    cachedDiffs[aIndex][bIndex] = elementDiff;
                     return callback(elementDiff.weight.real === DiffCommon.WEIGHT_OK);
                 });
             },
@@ -318,7 +322,16 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
             function (a, b, aIndex, bIndex, callback) {
 
                 if (onlyExactMatches) {
-                    return callback(false);
+                    const diff = cachedDiffs[aIndex] && cachedDiffs[aIndex][bIndex];
+                    if (!diff) {
+                        diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options).then(elementDiff => {
+                            cachedDiffs[aIndex] = cachedDiffs[aIndex] || {};
+                            cachedDiffs[aIndex][bIndex] = elementDiff;
+                            return callback(elementDiff.weight.real === DiffCommon.WEIGHT_OK);
+                        });
+                    } else {
+                        return callback(diff.weight.real === DiffCommon.WEIGHT_OK);
+                    }
                 }
                 var aIsNativeType = isNativeType(a);
                 var bIsNativeType = isNativeType(b);
