@@ -324,10 +324,10 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
                 if (onlyExactMatches) {
                     const diff = cachedDiffs[aIndex] && cachedDiffs[aIndex][bIndex];
                     if (!diff) {
-                        diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options).then(elementDiff => {
+                        return diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options).then(elementDiff => {
                             cachedDiffs[aIndex] = cachedDiffs[aIndex] || {};
                             cachedDiffs[aIndex][bIndex] = elementDiff;
-                            return callback(elementDiff.weight.real === DiffCommon.WEIGHT_OK);
+                            callback(elementDiff.weight.real === DiffCommon.WEIGHT_OK);
                         });
                     } else {
                         return callback(diff.weight.real === DiffCommon.WEIGHT_OK);
@@ -360,7 +360,7 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
                         case 'insert':
                             insertCount++;
                             let actualIndex = null;
-                            if (typeof diffItem.actualIndex === 'number') {
+                            if (diffItem.hasOwnProperty('expectedValue')) {
                                 itemResult = convertToDiff(actualAdapter, diffItem.value);
                                 actualIndex = diffItem.actualIndex;
                             } else {
@@ -410,7 +410,6 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
                                     diffWeights.addWeight(result.weight);
                                 });
                             promises.push(promise);
-
                             break;
                     }
 

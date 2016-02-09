@@ -9,6 +9,7 @@ import MagicPenPrism from 'magicpen-prism';
 import Unexpected from 'unexpected';
 import ObjectAssign from 'object-assign';
 import Diff from '../diff';
+import MockExtensions from './mock-extensions';
 
 import {
     expectedSymbol,
@@ -19,163 +20,12 @@ import {
     createExpected
 } from './mockEntities';
 
-const expect = Unexpected.clone();
+const expect = Unexpected.clone()
+    .use(MockExtensions);
 
 
 expect.output.preferredWidth = 80;
 
-expect.addType({
-    name: 'TestHtmlLike',
-    identify: value => value && value.name && value.attribs && value.children,
-    inspect: (value, depth, output, inspect) => {
-
-        const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
-        return htmlLikeUnexpected.inspect(value, depth, output, inspect);
-    },
-
-    diff: (actual, expected, output, diff, inspect) => {
-        const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
-        return htmlLikeUnexpected.inspect(value, depth, output, inspect);
-    }
-});
-
-function shiftResultOrPromise(resultOrPromise, expect) {
-    if (resultOrPromise && typeof resultOrPromise.then === 'function') {
-        return resultOrPromise.then(result => {
-            return expect.shift(result);
-        });
-    }
-    return expect.shift(resultOrPromise);
-}
-
-expect.addAssertion('<any> to inspect as <string>', (expect, subject, value) => {
-    expect(expect.inspect(subject).toString(), 'to equal', value);
-});
-
-expect.addAssertion('<TestHtmlLike> when diffed against <TestHtmlLike> <assertion>', (expect, subject, value) => {
-
-    const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
-    const pen = expect.output.clone();
-    const promiseOrResult = htmlLikeUnexpected.diff(TestExpectedAdapter, subject, value, pen, expect);
-    return shiftResultOrPromise(promiseOrResult, expect);
-});
-
-
-expect.addAssertion('<TestHtmlLike> when diffed with options against <object> <TestHtmlLike> <assertion>', (expect, subject, options, value) => {
-
-    const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
-    const pen = expect.output.clone();
-
-    const promiseOrResult = htmlLikeUnexpected.diff(TestExpectedAdapter, subject, value, pen, expect, options);
-    return shiftResultOrPromise(promiseOrResult, expect);
-});
-
-expect.addType({
-    name: 'HtmlDiffResult',
-    base: 'object',
-    identify: value => value && value.output && typeof value.weight === 'number'
-});
-
-expect.addAssertion('<HtmlDiffResult> to have weight <number>', (expect, subject, weight) => {
-    expect.withError(() => expect(subject.weight, 'to equal', weight), () => {
-        expect.fail({
-            diff: function (output) {
-                return {
-                    inline: false,
-                    diff: output.error('expected').text(' weight ').gray('to be ').text(weight).gray(' but was ').text(subject.weight)
-                };
-            }
-        });
-    });
-});
-
-expect.addAssertion('<HtmlDiffResult> to output <magicpen>', (expect, subject, pen) => {
-    expect.withError(() => expect(subject.output, 'to equal', pen), () => {
-      return expect.fail({
-          diff: function (output, diff, inspect) {
-             return {
-                 inline: false,
-                 diff: output.block(function () {
-                     this.append(inspect(subject.output));
-                 }).sp().block(function () {
-                     this.append(inspect(pen));
-                 })
-             };
-          }
-      });
-    });
-});
-
-expect.addAssertion('<HtmlDiffResult> to output <string>', (expect, subject, value) => {
-    expect(subject.output.toString(), 'to equal', value);
-});
-
-expect.addAssertion('<HtmlDiffResult> to output with weight <string> <number>', (expect, subject, value, weight) => {
-    expect.withError(() => expect(subject.output.toString(), 'to equal', value), e => {
-        return expect.fail({
-            diff: function (output, diff, inspect) {
-                return {
-                    inline: false,
-                    diff: output.block(function () {
-                        this.block(e.getDiff(output).diff).nl(2).block(inspect(subject.diff));
-                    })
-                };
-            }
-        });
-    });
-    expect(subject, 'to have weight', weight);
-});
-
-expect.addAssertion('<TestHtmlLike> when checked to contain <TestHtmlLike> <assertion>', (expect, subject, value) => {
-    const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
-    const resultOrPromise = htmlLikeUnexpected.contains(TestExpectedAdapter, subject, value, expect.output, expect, null);
-    return shiftResultOrPromise(resultOrPromise, expect);
-});
-
-expect.addAssertion('<TestHtmlLike> when checked with options to contain <object> <TestHtmlLike> <assertion>', (expect, subject, options, value) => {
-    const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
-    const resultOrPromise = htmlLikeUnexpected.contains(TestExpectedAdapter, subject, value, expect.output, expect, options);
-    return shiftResultOrPromise(resultOrPromise, expect);
-});
-
-expect.addType({
-    name: 'ContainsResult',
-    base: 'object',
-    identify: value => {
-        return value &&
-            typeof value.found === 'boolean' &&
-            value.hasOwnProperty('bestMatch');
-    }
-});
-
-expect.addAssertion('<ContainsResult> to output <string>', (expect, subject, value) => {
-    expect.errorMode = 'bubble';
-    expect(subject.bestMatch, 'not to be null');
-    expect(subject.bestMatch.output, 'to be defined');
-    expect(subject.bestMatch.output.toString(), 'to equal', value);
-});
-
-// Dummy assertion for testing async expect.it
-expect.addAssertion('<string> to eventually have value <string>', (expect, subject, value) => {
-
-    return expect.promise((resolve, reject) => {
-
-        setTimeout(() => {
-            if (subject === value) {
-                resolve();
-            } else {
-                try {
-                    expect.fail('Failed');
-                } catch (e) {
-                    reject(e); // Return the UnexpectedError object
-                }
-            }
-        }, 10);
-    });
-});
-
-
-expect.use(MagicPenPrism);
 
 const prismPen = MagicPen();
 prismPen.use(MagicPenPrism);
@@ -322,7 +172,7 @@ describe('HtmlLikeComponent', () => {
 
            return expect(createActual({
                name: 'div', attribs: { id: 'foo' }, children: []
-           }), 'when diffed against', createExpected({
+           }), 'when diffed as html against', createExpected({
                name: 'div', attribs: { id: 'bar' }, children: []
            }), 'to have weight', HtmlLikeUnexpected.DefaultWeights.ATTRIBUTE_MISMATCH);
 
@@ -332,7 +182,7 @@ describe('HtmlLikeComponent', () => {
 
             return expect(createActual({
                 name: 'div', attribs: { id: 'foo' }, children: []
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { id: 'bar' }, children: []
             }), 'to output', '<div id="foo" // should be id="bar"\n' +
             '              // -foo\n' +
@@ -344,7 +194,7 @@ describe('HtmlLikeComponent', () => {
         it('outputs attributes that are different types but evaluate to the same string', () => {
             return expect(createActual({
                 name: 'div', attribs: { id: '42' }, children: []
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { id: 42 }, children: []
             }), 'to output with weight', '<div id="42" // should be id={42}\n' +
             '/>', Diff.DefaultWeights.ATTRIBUTE_MISMATCH);
@@ -355,7 +205,7 @@ describe('HtmlLikeComponent', () => {
 
             return expect(createActual({
                 name: 'div', attribs: { id: 'foo', className: 'testing' }, children: []
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { id: 'bar', className: 'testing' }, children: []
             }), 'to output', '<div id="foo" // should be id="bar"\n' +
             '              // -foo\n' +
@@ -368,7 +218,7 @@ describe('HtmlLikeComponent', () => {
 
             return expect(createActual({
                 name: 'div', attribs: { className: 'testing', id: 'foo'  }, children: []
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { className: 'testing', id: 'bar' }, children: []
             }), 'to output', '<div className="testing" id="foo" // should be id="bar"\n' +
             '                                  // -foo\n' +
@@ -396,7 +246,7 @@ describe('HtmlLikeComponent', () => {
 
             return expect(createActual({
                 name: 'div', attribs: actualAttribs, children: []
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: expectedAttribs, children: []
             }), 'to output', '<div data-attrib1="aaa" data-attrib2="hello world" data-attrib3="testing is fun"\n' +
             '   data-attrib4="hallo welt" data-attrib5="jonny number five"\n' +
@@ -411,7 +261,7 @@ describe('HtmlLikeComponent', () => {
         it('highlights a missing attribute', () => {
             return expect(createActual({
                 name: 'div', attribs: { id: 'foo'  }, children: []
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { className: 'testing', id: 'foo' }, children: []
             }), 'to output', '<div id="foo" // missing className="testing"\n' +
             '/>');
@@ -420,7 +270,7 @@ describe('HtmlLikeComponent', () => {
         it('highlights two missing attributes', () => {
             return expect(createActual({
                 name: 'div', attribs: { id: 'foo'  }, children: []
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { className: 'testing', id: 'foo', extra: '123' }, children: []
             }), 'to output', '<div id="foo" // missing className="testing"\n' +
             '   // missing extra="123"\n' +
@@ -431,7 +281,7 @@ describe('HtmlLikeComponent', () => {
 
             return expect(createActual({
                 name: 'div', attribs: { id: 'foo' }, children: ['abc']
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { id: 'foo' }, children: ['def']
             }), 'to output with weight', '<div id="foo">\n' +
             '  -abc\n' +
@@ -443,7 +293,7 @@ describe('HtmlLikeComponent', () => {
 
             return expect(createActual({
                 name: 'div', attribs: { id: 'foo' }, children: [ '42' ]
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { id: 'foo' }, children: [ 42 ]
             }), 'to output with weight', '<div id="foo">\n' +
             '  42 // mismatched type -string\n' +
@@ -458,7 +308,7 @@ describe('HtmlLikeComponent', () => {
                 { name: 'span', attribs: {}, children: ['one'] },
                 { name: 'span', attribs: {}, children: ['two'] }
             ]
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { id: 'foo' }, children: [
                 { name: 'span', attribs: {}, children: ['one'] },
                 { name: 'span', attribs: {}, children: ['updated'] }
@@ -479,7 +329,7 @@ describe('HtmlLikeComponent', () => {
                 { name: 'div', attribs: {}, children: ['one'] },
                 { name: 'span', attribs: {}, children: ['two'] }
             ]
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { id: 'foo' }, children: [
                 { name: 'span', attribs: {}, children: ['one'] },
                 { name: 'span', attribs: {}, children: ['two'] }
@@ -500,7 +350,7 @@ describe('HtmlLikeComponent', () => {
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                 { name: 'span', attribs: {}, children: ['two'] }
             ]
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { id: 'foo' }, children: [
                 { name: 'span', attribs: { id: 'childbar' }, children: ['one'] },
                 { name: 'span', attribs: {}, children: ['two'] }
@@ -522,7 +372,7 @@ describe('HtmlLikeComponent', () => {
                 name: 'div', attribs: { id: 'foo' }, children: [
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }
             ]
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { id: 'foo' }, children: [
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                 { name: 'span', attribs: {}, children: ['two'] }
@@ -540,7 +390,7 @@ describe('HtmlLikeComponent', () => {
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                 { name: 'span', attribs: {}, children: ['two'] }
             ]
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { id: 'foo' }, children: [
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }
             ]
@@ -558,7 +408,7 @@ describe('HtmlLikeComponent', () => {
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                 { name: 'span', attribs: {}, children: ['two'] }
             ]
-            }), 'when diffed with options against', { weights: { NATIVE_NONNATIVE_MISMATCH: 1 } }, createExpected({
+            }), 'when diffed as html with options against', { weights: { NATIVE_NONNATIVE_MISMATCH: 1 } }, createExpected({
                 name: 'div', attribs: { id: 'foo' }, children: [
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                 'some text'
@@ -576,7 +426,7 @@ describe('HtmlLikeComponent', () => {
                 name: 'div', attribs: {}, children: [
                 'two'
             ]
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: {}, children: [
                 { name: 'child', attribs: {}, children: ['aa' ] }
             ]
@@ -595,7 +445,7 @@ describe('HtmlLikeComponent', () => {
                     { name: 'span', attribs: { className: 'deep' }, children: ['nested and broken over many lines because it is very long'] }
                 ] }
             ]
-            }), 'when diffed with options against', { weights: { NATIVE_NONNATIVE_MISMATCH: 1 } }, createExpected({
+            }), 'when diffed as html with options against', { weights: { NATIVE_NONNATIVE_MISMATCH: 1 } }, createExpected({
                 name: 'div', attribs: { id: 'foo' }, children: [
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                 'some text'
@@ -618,7 +468,7 @@ describe('HtmlLikeComponent', () => {
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                 'some text'
             ]
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { id: 'foo' }, children: [
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                 { name: 'span', attribs: {}, children: ['two'] }
@@ -636,7 +486,7 @@ describe('HtmlLikeComponent', () => {
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                 'some text'
             ]
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { id: 'foo' }, children: [
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                 { name: 'span', attribs: {}, children: [
@@ -665,7 +515,7 @@ describe('HtmlLikeComponent', () => {
                         name: 'div', attribs: { id: 'foo' }, children: [
                             { name: 'span', attribs: { id: 'childfoo', extraAttribute: 'does not matter' }, children: ['one'] }
                         ]
-                    }), 'when diffed with options against', { diffExtraAttributes: false }, createExpected({
+                    }), 'when diffed as html with options against', { diffExtraAttributes: false }, createExpected({
                         name: 'div', attribs: { id: 'foo' }, children: [
                             { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }
                         ]
@@ -679,7 +529,7 @@ describe('HtmlLikeComponent', () => {
                         name: 'div', attribs: { id: 'foo' }, children: [
                             { name: 'span', attribs: { id: 'childfoo', 'data-extraAttribute': 'does matter' }, children: ['one'] }
                         ]
-                    }), 'when diffed with options against', { diffExtraAttributes: true }, createExpected({
+                    }), 'when diffed as html with options against', { diffExtraAttributes: true }, createExpected({
                         name: 'div', attribs: { id: 'foo' }, children: [
                             { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }
                         ]
@@ -702,7 +552,7 @@ describe('HtmlLikeComponent', () => {
                         name: 'div', attribs: { id: 'foo' }, children: [
                             { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }
                         ]
-                    }), 'when diffed with options against', { diffRemovedAttributes: true }, createExpected({
+                    }), 'when diffed as html with options against', { diffRemovedAttributes: true }, createExpected({
                         name: 'div', attribs: { id: 'foo' }, children: [
                             { name: 'span', attribs: { id: 'childfoo', removedAttribute: 'does matter' }, children: ['one'] }
                         ]
@@ -720,7 +570,7 @@ describe('HtmlLikeComponent', () => {
                         name: 'div', attribs: { id: 'foo' }, children: [
                             { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }
                         ]
-                    }), 'when diffed with options against', { diffRemovedAttributes: false }, createExpected({
+                    }), 'when diffed as html with options against', { diffRemovedAttributes: false }, createExpected({
                         name: 'div', attribs: { id: 'foo' }, children: [
                             { name: 'span', attribs: { id: 'childfoo', 'data-removedAttribute': 'does matter' }, children: ['one'] }
                         ]
@@ -736,7 +586,7 @@ describe('HtmlLikeComponent', () => {
                         name: 'div', attribs: { id: 'foo' }, children: [
                         { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }
                     ]
-                    }), 'when diffed with options against', { diffMissingChildren: true }, createExpected({
+                    }), 'when diffed as html with options against', { diffMissingChildren: true }, createExpected({
                         name: 'div', attribs: { id: 'foo' }, children: [
                         { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                         { name: 'span', attribs: { id: 'removed-child' }, children: ['two'] }
@@ -753,7 +603,7 @@ describe('HtmlLikeComponent', () => {
                         name: 'div', attribs: { id: 'foo' }, children: [
                         { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }
                     ]
-                    }), 'when diffed with options against', { diffMissingChildren: false }, createExpected({
+                    }), 'when diffed as html with options against', { diffMissingChildren: false }, createExpected({
                         name: 'div', attribs: { id: 'foo' }, children: [
                         { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                         { name: 'span', attribs: { id: 'removed-child' }, children: ['two'] }
@@ -771,7 +621,7 @@ describe('HtmlLikeComponent', () => {
                         { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                         { name: 'span', attribs: { id: 'extra-child' }, children: ['two'] }
                     ]
-                    }), 'when diffed with options against', { diffExtraChildren: true }, createExpected({
+                    }), 'when diffed as html with options against', { diffExtraChildren: true }, createExpected({
                         name: 'div', attribs: { id: 'foo' }, children: [
                         { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }
                     ]
@@ -788,7 +638,7 @@ describe('HtmlLikeComponent', () => {
                         { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                         { name: 'span', attribs: { id: 'extra-child' }, children: ['two'] }
                     ]
-                    }), 'when diffed with options against', { diffExtraChildren: false }, createExpected({
+                    }), 'when diffed as html with options against', { diffExtraChildren: false }, createExpected({
                         name: 'div', attribs: { id: 'foo' }, children: [
                         { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }
                     ]
@@ -809,7 +659,7 @@ describe('HtmlLikeComponent', () => {
                         ]
                         }
                     ]
-                }), 'when diffed against', createExpected({
+                }), 'when diffed as html against', createExpected({
                         name: 'body', attribs: { id: 'main' }, children: [
                         {
                             name: 'span', attribs: { id: 'childfoo' }, children: ['one']
@@ -833,7 +683,7 @@ describe('HtmlLikeComponent', () => {
                     ]
                     }
                 ]
-                }), 'when diffed against', createExpected({
+                }), 'when diffed as html against', createExpected({
                     name: 'body', attribs: { id: 'main' }, children: [
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
@@ -856,7 +706,7 @@ describe('HtmlLikeComponent', () => {
                     ]
                     }
                 ]
-                }), 'when diffed against', createExpected({
+                }), 'when diffed as html against', createExpected({
                     name: 'body', attribs: { id: 'main' }, children: [
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     { name: 'span', attribs: { id: 'other' }, children: ['changed'] }
@@ -884,7 +734,7 @@ describe('HtmlLikeComponent', () => {
                         { name: 'childWrapper', attribs: {}, children: [{ name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }] },
                         { name: 'childWrapper', attribs: {}, children: [{ name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }] }
                 ]
-                }), 'when diffed against', createExpected({
+                }), 'when diffed as html against', createExpected({
                     name: 'body', attribs: { id: 'main' }, children: [
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
@@ -906,7 +756,7 @@ describe('HtmlLikeComponent', () => {
                     { name: 'childWrapper', attribs: { id: 'wrapper1' }, children: [{ name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }] },
                     { name: 'childWrapper', attribs: { id: 'wrapper2' }, children: [{ name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }] }
                 ]
-                }), 'when diffed against', createExpected({
+                }), 'when diffed as html against', createExpected({
                     name: 'body', attribs: { id: 'main' }, children: [
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
@@ -928,7 +778,7 @@ describe('HtmlLikeComponent', () => {
                     { name: 'childWrapper', attribs: {}, children: [{ name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }] },
                     { name: 'childWrapper', attribs: {}, children: [{ name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }] }
                 ]
-                }), 'when diffed with options against', { diffWrappers: false }, createExpected({
+                }), 'when diffed as html with options against', { diffWrappers: false }, createExpected({
                     name: 'body', attribs: { id: 'main' }, children: [
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
@@ -957,7 +807,7 @@ describe('HtmlLikeComponent', () => {
                     ]
                     }
                 ]
-                }), 'when diffed against', createExpected({
+                }), 'when diffed as html against', createExpected({
                         name: 'TopLevel', attribs: {}, children: [
                         { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                         { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
@@ -980,7 +830,7 @@ describe('HtmlLikeComponent', () => {
                     ]
                     }
                 ]
-                }), 'when diffed against', createExpected({
+                }), 'when diffed as html against', createExpected({
                     name: 'MidLevel', attribs: {}, children: [
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
@@ -1005,7 +855,7 @@ describe('HtmlLikeComponent', () => {
                     ]
                     }
                 ]
-                }), 'when diffed with options against', { diffWrappers: false }, createExpected({
+                }), 'when diffed as html with options against', { diffWrappers: false }, createExpected({
                     name: 'MidLevel', attribs: {}, children: [
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
@@ -1030,7 +880,7 @@ describe('HtmlLikeComponent', () => {
                     ]
                     }
                 ]
-                }), 'when diffed with options against', { diffWrappers: false }, createExpected({
+                }), 'when diffed as html with options against', { diffWrappers: false }, createExpected({
                     name: 'TopLevel', attribs: { id: 'main' }, children: [
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['changed'] }
@@ -1063,7 +913,7 @@ describe('HtmlLikeComponent', () => {
                     ]
                     }
                 ]
-                }), 'when diffed with options against', { diffWrappers: false }, createExpected({ name: 'HigherOrderTopLevel', attribs: { id: 'main' }, children: [
+                }), 'when diffed as html with options against', { diffWrappers: false }, createExpected({ name: 'HigherOrderTopLevel', attribs: { id: 'main' }, children: [
                             { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                             { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
                 ]
@@ -1177,7 +1027,7 @@ describe('HtmlLikeComponent', () => {
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                     { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
                 ]
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'TopLevel', attribs: {}, children: [
                 { name: 'span', attribs: { id: expect.it('to match', /[a-f]+$/) }, children: ['one'] },
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
@@ -1198,7 +1048,7 @@ describe('HtmlLikeComponent', () => {
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
             ]
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'TopLevel', attribs: {}, children: [
                 { name: 'span', attribs: { id: expect.it('to match', /[a-f]+$/).and('to have length', 8) }, children: ['one'] },
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
@@ -1221,7 +1071,7 @@ describe('HtmlLikeComponent', () => {
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['one'] },
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
             ]
-            }), 'when diffed against', createExpected({
+            }), 'when diffed as html against', createExpected({
                 name: 'TopLevel', attribs: {}, children: [
                 { name: 'span', attribs: { id: expect.it('to match', /[a-f]+$/).and('to have length', 8) }, children: ['one'] },
                 { name: 'span', attribs: { id: 'childfoo' }, children: ['two'] }
@@ -1240,7 +1090,7 @@ describe('HtmlLikeComponent', () => {
 
             return expect(
                 createActual({ name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }),
-                'when diffed against',
+                'when diffed as html against',
                 createExpected(
                     { name: 'span', attribs: { id: expect.it('to eventually have value', 'not childfoo') }, children: ['one'] }
                 ),
@@ -1257,7 +1107,7 @@ describe('HtmlLikeComponent', () => {
 
             return expect(
                 createActual({ name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }),
-                'when diffed against',
+                'when diffed as html against',
                 createExpected(
                     { name: 'span', attribs: { id: expect.it('to eventually have value', 'childfoo') }, children: ['one'] }
                 ),
@@ -1271,7 +1121,7 @@ describe('HtmlLikeComponent', () => {
 
             return expect(
                 createActual({ name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }),
-                'when diffed against',
+                'when diffed as html against',
                 createExpected(
                     { name: 'span', attribs: { id: 'childfoo' }, children: [ expect.it('to eventually have value', 'not one') ] }
                 ),
@@ -1287,7 +1137,7 @@ describe('HtmlLikeComponent', () => {
 
             return expect(
                 createActual({ name: 'span', attribs: { id: 'childfoo' }, children: ['one'] }),
-                'when diffed against',
+                'when diffed as html against',
                 createExpected(
                     { name: 'span', attribs: { id: 'childfoo' }, children: [ expect.it('to eventually have value', 'one') ] }
                 ),
@@ -1301,8 +1151,8 @@ describe('HtmlLikeComponent', () => {
             return expect(createActual({ name: 'div', attribs: {}, children: [
                 { name: 'span', attribs: {}, children: [ 'one' ] },
                 { name: 'span', attribs: {}, children: [ 'two' ] },
-                { name: 'span', attribs: {}, children: [ 'four' ] },
-            ] }), 'when diffed against', createExpected({ name: 'div', attribs: {}, children: [
+                { name: 'span', attribs: {}, children: [ 'four' ] }
+            ] }), 'when diffed as html against', createExpected({ name: 'div', attribs: {}, children: [
                 { name: 'span', attribs: {}, children: [ expect.it('to eventually have value', 'one') ] },
                 { name: 'span', attribs: {}, children: [ expect.it('to eventually have value', 'two') ] },
                 { name: 'span', attribs: {}, children: [ expect.it('to eventually have value', 'three') ] },

@@ -2,51 +2,17 @@ import Unexpected from 'unexpected';
 
 import Diff from '../diff';
 
-const expect = Unexpected.clone();
+import MockExtensions from './mock-extensions';
+
+const expect = Unexpected.clone()
+    .use(MockExtensions);
 
 import {
-    expectedSymbol,
-    actualSymbol,
-    TestExpectedAdapter,
-    TestActualAdapter,
     createActual,
     createExpected
 } from './mockEntities';
 
 
-function getDiff(actual, expected, options) {
-    return Diff.diffElements(TestActualAdapter, TestExpectedAdapter, actual, expected, expect, options);
-}
-
-function shiftResultOrPromise(resultOrPromise, expect) {
-    if (resultOrPromise && typeof resultOrPromise.then === 'function') {
-        return resultOrPromise.then(result => {
-            return expect.shift(result);
-        });
-    }
-    return expect.shift(resultOrPromise);
-
-}
-
-expect.addType({
-    name: 'TestHtmlElement',
-    identify: function (value) {
-        return value &&
-            typeof value === 'object' &&
-            typeof value.name === 'string' &&
-            typeof value.attribs === 'object';
-    }
-});
-
-expect.addAssertion('<string|TestHtmlElement> when diffed against <string|TestHtmlElement> <assertion>', function (expect, subject, value) {
-
-    return shiftResultOrPromise(getDiff(subject, value, {}), expect);
-});
-
-expect.addAssertion('<TestHtmlElement|string> when diffed with options against <object> <TestHtmlElement|string> <assertion>', function (expect, subject, options, value) {
-
-    return shiftResultOrPromise(getDiff(subject, value, options), expect);
-});
 
 
 describe('diff', () => {
@@ -457,19 +423,12 @@ describe('diff', () => {
                     {
                         type: 'ELEMENT',
                         name: 'Test',
-                        children: [ { type: 'CONTENT', value: 'three' } ],
-                        diff: { type: 'missing', actualIndex: 2 }
+                        children: [ { type: 'CONTENT', value: 'two', diff: { type: 'changed', expectedValue: 'three' } } ],
                     },
                     {
                         type: 'ELEMENT',
                         name: 'Test',
-                        children: [ { type: 'CONTENT', value: 'two' } ]
-                    },
-                    {
-                        type: 'ELEMENT',
-                        name: 'Test',
-                        children: [ { type: 'CONTENT', value: 'three' } ],
-                        diff: { type: 'extra' }
+                        children: [ { type: 'CONTENT', value: 'three', diff: { type: 'changed', expectedValue: 'two' } } ]
                     }
 
                 ]
@@ -1209,7 +1168,6 @@ describe('diff', () => {
 
         it('accepts a passing expect.it attribute assertion', () => {
             return expect(createActual({
-                type: 'ELEMENT',
                 name: 'SomeElement',
                 attribs: {
                     className: 'abcde'
@@ -1234,7 +1192,6 @@ describe('diff', () => {
 
         it('diffs an expect.it attribute assertion', () => {
             return expect(createActual({
-                type: 'ELEMENT',
                 name: 'SomeElement',
                 attribs: {
                     className: 'abcde'
@@ -1311,6 +1268,40 @@ describe('diff', () => {
                     }]
                 },
                 weight: Diff.DefaultWeights.OK
+            });
+        });
+
+        it('works out which children match best, with asynchronous expect.it assertions in the children', () => {
+            return expect(createActual({ name: 'div', attribs: {}, children: [
+                { name: 'span', attribs: {}, children: [ 'one' ] },
+                { name: 'span', attribs: {}, children: [ 'two' ] },
+                { name: 'span', attribs: {}, children: [ 'four' ] }
+            ] }), 'when diffed against', createExpected({ name: 'div', attribs: {}, children: [
+                { name: 'span', attribs: {}, children: [ expect.it('to eventually have value', 'one') ] },
+                { name: 'span', attribs: {}, children: [ expect.it('to eventually have value', 'two') ] },
+                { name: 'span', attribs: {}, children: [ expect.it('to eventually have value', 'three') ] },
+                { name: 'span', attribs: {}, children: [ expect.it('to eventually have value', 'four') ] }
+            ] }), 'to satisfy',  {
+                diff: {
+                    type: 'ELEMENT',
+                    name: 'div',
+                    children: [
+                        { type: 'ELEMENT', children: [ { type: 'CONTENT', value: 'one' } ] },
+                        { type: 'ELEMENT', children: [ { type: 'CONTENT', value: 'two' } ] },
+                        {
+                            type: 'ELEMENT',
+                            children: [
+                                {
+                                    type: 'CONTENT',
+                                    value: expect.it('to equal', expect.it('to eventually have value', 'three'))
+                                    // The double expect.it here so that the 'to satisfy' above doesn't run the expect.it
+                                }
+                            ],
+                            diff: { type: 'missing' }
+                        },
+                        { type: 'ELEMENT', children: [ { type: 'CONTENT', value: 'four' } ] }
+                    ]
+                }
             });
         });
     });
