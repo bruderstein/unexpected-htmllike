@@ -308,13 +308,22 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
     const promises = [];
 
     return expect.promise((resolve, reject) => {
-        const cachedDiffs = {};
+        const actualChildrenLength = actualChildren.length;
+        const expectedChildrenLength = expectedChildren.length;
+
+        const cachedDiffs = [];
+        cachedDiffs.length = actualChildrenLength * expectedChildrenLength;
+
         ArrayChangesAsync(actualChildren, expectedChildren,
             function (a, b, aIndex, bIndex, callback) {
 
+                const cacheIndex = (aIndex * expectedChildrenLength) + bIndex;
+                if (cachedDiffs[cacheIndex]) {
+                    return callback(cachedDiffs[cacheIndex].weight.real === DiffCommon.WEIGHT_OK);
+                }
+
                 diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options).then(elementDiff => {
-                    cachedDiffs[aIndex] = cachedDiffs[aIndex] || {};
-                    cachedDiffs[aIndex][bIndex] = elementDiff;
+                    cachedDiffs[cacheIndex] = elementDiff;
                     return callback(elementDiff.weight.real === DiffCommon.WEIGHT_OK);
                 });
             },
@@ -322,16 +331,16 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
             function (a, b, aIndex, bIndex, callback) {
 
                 if (onlyExactMatches) {
-                    const diff = cachedDiffs[aIndex] && cachedDiffs[aIndex][bIndex];
-                    if (!diff) {
-                        return diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options).then(elementDiff => {
-                            cachedDiffs[aIndex] = cachedDiffs[aIndex] || {};
-                            cachedDiffs[aIndex][bIndex] = elementDiff;
-                            callback(elementDiff.weight.real === DiffCommon.WEIGHT_OK);
-                        });
-                    } else {
+                    const cacheIndex = (aIndex * expectedChildrenLength) + bIndex;
+                    const diff = cachedDiffs[cacheIndex];
+                    if (diff) {
                         return callback(diff.weight.real === DiffCommon.WEIGHT_OK);
                     }
+
+                    return diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options).then(elementDiff => {
+                        cachedDiffs[cacheIndex] = elementDiff;
+                        callback(elementDiff.weight.real === DiffCommon.WEIGHT_OK);
+                    });
                 }
                 var aIsNativeType = isNativeType(a);
                 var bIsNativeType = isNativeType(b);
