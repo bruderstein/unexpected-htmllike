@@ -1304,6 +1304,96 @@ describe('diff', () => {
                 }
             });
         });
+
+        it('diffs a child array where the children are not identical (async)', () => {
+
+            // This test is to specifically test the `similar` handler for async diffs
+            // The aaa is removed, but the bbb is then not identical, causing an "insert"
+
+            return expect(createActual({ name: 'div', attribs: {}, children: [
+                { name: 'aaa', attribs: { className: 'one' }, children: [ 'one' ] },
+                { name: 'bbb', attribs: { className: 'two' }, children: [ 'two' ] },
+                { name: 'ccc', attribs: { className: 'three' }, children: [ 'three' ] },
+                { name: 'ddd', attribs: { className: 'four' }, children: [ 'four' ] },
+            ] }), 'when diffed against', createExpected({ name: 'div', attribs: {}, children: [
+                { name: 'bbb', attribs: { className: 'two', extraAttrib: 'test' }, children: [ expect.it('to eventually have value', 'two') ] },
+                { name: 'ccc', attribs: { className: 'three' }, children: [ expect.it('to eventually have value', 'three') ] },
+                { name: 'ddd', attribs: { className: 'four' }, children: [ expect.it('to eventually have value', 'four') ] }
+            ] }), 'to satisfy', {
+                diff: {
+                    children: [
+                        {
+                            name: 'aaa',
+                            diff: { type: 'extra' }
+                        },
+                        {
+                            name: 'bbb',
+                            attributes: [
+                                { name: 'className' },
+                                { name: 'extraAttrib', diff: { type: 'missing' } }
+                            ],
+                            diff: undefined
+                        },
+                        {
+                            name: 'ccc',
+                            diff: undefined
+                        },
+                        {
+                            name: 'ddd',
+                            diff: undefined
+                        }
+
+                    ]
+                }
+
+            });
+
+        });
+
+        it('diffs a child array where the children are not identical (sync)', () => {
+
+            // This test is to specifically test the `similar` handler for sync diffs
+            // The aaa is removed, but the bbb is then not identical, causing an "insert"
+
+            return expect(createActual({ name: 'div', attribs: {}, children: [
+                { name: 'aaa', attribs: { className: 'one' }, children: [ 'one' ] },
+                { name: 'bbb', attribs: { className: 'two' }, children: [ 'two' ] },
+                { name: 'ccc', attribs: { className: 'three' }, children: [ 'three' ] },
+                { name: 'ddd', attribs: { className: 'four' }, children: [ 'four' ] }
+            ] }), 'when diffed against', createExpected({ name: 'div', attribs: {}, children: [
+                { name: 'bbb', attribs: { className: 'two', extraAttrib: 'test' }, children: [ 'two' ] },
+                { name: 'ccc', attribs: { className: 'three' }, children: [ 'three'] },
+                { name: 'ddd', attribs: { className: 'four' }, children: [ 'four'] }
+            ] }), 'to satisfy', {
+                diff: {
+                    children: [
+                        {
+                            name: 'aaa',
+                            diff: { type: 'extra' }
+                        },
+                        {
+                            name: 'bbb',
+                            attributes: [
+                                { name: 'className' },
+                                { name: 'extraAttrib', diff: { type: 'missing' } }
+                            ],
+                            diff: undefined
+                        },
+                        {
+                            name: 'ccc',
+                            diff: undefined
+                        },
+                        {
+                            name: 'ddd',
+                            diff: undefined
+                        }
+
+                    ]
+                }
+
+            });
+
+        });
     });
 
     describe('class comparisons', () => {
