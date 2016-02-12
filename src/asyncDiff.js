@@ -369,7 +369,7 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
                         case 'insert':
                             insertCount++;
                             let actualIndex = null;
-                            if (diffItem.hasOwnProperty('expectedValue')) {
+                            if (typeof diffItem.actualIndex === 'number') {
                                 itemResult = convertToDiff(actualAdapter, diffItem.value);
                                 actualIndex = diffItem.actualIndex;
                             } else {
