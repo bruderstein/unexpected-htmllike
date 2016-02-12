@@ -253,16 +253,33 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
     let removeCount = 0;
     let changeCount = 0;
 
+    const actualChildrenLength = actualChildren.length;
+    const expectedChildrenLength = expectedChildren.length;
+
+    const cachedDiffs = [];
+    cachedDiffs.length = actualChildrenLength * expectedChildrenLength;
+
     const changes = ArrayChanges(actualChildren, expectedChildren,
         function (a, b, aIndex, bIndex) {
-            const elementDiff = diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options);
-            return elementDiff.weight.real === DiffCommon.WEIGHT_OK;
+            const cacheIndex = (aIndex * expectedChildrenLength) + bIndex;
+            let elementDiff = cachedDiffs[cacheIndex];
+            if (!elementDiff) {
+                elementDiff = diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options);
+                cachedDiffs[cacheIndex] = elementDiff;
+            }
+            return (cachedDiffs[cacheIndex].weight.real === DiffCommon.WEIGHT_OK);
         },
 
         function (a, b, aIndex, bIndex) {
 
             if (onlyExactMatches) {
-                return false;
+                const cacheIndex = (aIndex * expectedChildrenLength) + bIndex;
+                let elementDiff = cachedDiffs[cacheIndex];
+                if (!elementDiff) {
+                    elementDiff = diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options);
+                    cachedDiffs[cacheIndex] = elementDiff;
+                }
+                return elementDiff.weight.real === DiffCommon.WEIGHT_OK;
             }
             var aIsNativeType = isNativeType(a);
             var bIsNativeType = isNativeType(b);
