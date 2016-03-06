@@ -2,45 +2,17 @@ import Unexpected from 'unexpected';
 
 import Diff from '../diff';
 
-const expect = Unexpected.clone();
+import MockExtensions from './mock-extensions';
+
+const expect = Unexpected.clone()
+    .use(MockExtensions);
 
 import {
-    expectedSymbol,
-    actualSymbol,
-    TestExpectedAdapter,
-    TestActualAdapter,
     createActual,
     createExpected
 } from './mockEntities';
 
 
-function getDiff(actual, expected, options) {
-    return Diff.diffElements(TestActualAdapter, TestExpectedAdapter, actual, expected, expect, options);
-}
-
-expect.addType({
-    name: 'TestHtmlElement',
-    identify: function (value) {
-        return value &&
-            typeof value === 'object' &&
-            typeof value.name === 'string' &&
-            typeof value.attribs === 'object';
-    }
-});
-
-expect.addAssertion('<string|TestHtmlElement> when diffed against <string|TestHtmlElement> <assertion>', function (expect, subject, value) {
-
-    return getDiff(subject, value, {}).then(diff => {
-        expect.shift(diff);
-    });
-});
-
-expect.addAssertion('<TestHtmlElement|string> when diffed with options against <object> <TestHtmlElement|string> <assertion>', function (expect, subject, options, value) {
-
-    return getDiff(subject, value, options).then(diff => {
-        expect.shift(diff);
-    });
-});
 
 
 describe('diff', () => {
@@ -451,19 +423,12 @@ describe('diff', () => {
                     {
                         type: 'ELEMENT',
                         name: 'Test',
-                        children: [ { type: 'CONTENT', value: 'three' } ],
-                        diff: { type: 'missing', actualIndex: 2 }
+                        children: [ { type: 'CONTENT', value: 'two', diff: { type: 'changed', expectedValue: 'three' } } ],
                     },
                     {
                         type: 'ELEMENT',
                         name: 'Test',
-                        children: [ { type: 'CONTENT', value: 'two' } ]
-                    },
-                    {
-                        type: 'ELEMENT',
-                        name: 'Test',
-                        children: [ { type: 'CONTENT', value: 'three' } ],
-                        diff: { type: 'extra' }
+                        children: [ { type: 'CONTENT', value: 'three', diff: { type: 'changed', expectedValue: 'two' } } ]
                     }
 
                 ]
@@ -1203,7 +1168,6 @@ describe('diff', () => {
 
         it('accepts a passing expect.it attribute assertion', () => {
             return expect(createActual({
-                type: 'ELEMENT',
                 name: 'SomeElement',
                 attribs: {
                     className: 'abcde'
@@ -1228,7 +1192,6 @@ describe('diff', () => {
 
         it('diffs an expect.it attribute assertion', () => {
             return expect(createActual({
-                type: 'ELEMENT',
                 name: 'SomeElement',
                 attribs: {
                     className: 'abcde'
@@ -1306,6 +1269,130 @@ describe('diff', () => {
                 },
                 weight: Diff.DefaultWeights.OK
             });
+        });
+
+        it('works out which children match best, with asynchronous expect.it assertions in the children', () => {
+            return expect(createActual({ name: 'div', attribs: {}, children: [
+                { name: 'span', attribs: {}, children: [ 'one' ] },
+                { name: 'span', attribs: {}, children: [ 'two' ] },
+                { name: 'span', attribs: {}, children: [ 'four' ] }
+            ] }), 'when diffed against', createExpected({ name: 'div', attribs: {}, children: [
+                { name: 'span', attribs: {}, children: [ expect.it('to eventually have value', 'one') ] },
+                { name: 'span', attribs: {}, children: [ expect.it('to eventually have value', 'two') ] },
+                { name: 'span', attribs: {}, children: [ expect.it('to eventually have value', 'three') ] },
+                { name: 'span', attribs: {}, children: [ expect.it('to eventually have value', 'four') ] }
+            ] }), 'to satisfy',  {
+                diff: {
+                    type: 'ELEMENT',
+                    name: 'div',
+                    children: [
+                        { type: 'ELEMENT', children: [ { type: 'CONTENT', value: 'one' } ] },
+                        { type: 'ELEMENT', children: [ { type: 'CONTENT', value: 'two' } ] },
+                        {
+                            type: 'ELEMENT',
+                            children: [
+                                {
+                                    type: 'CONTENT',
+                                    value: expect.it('to equal', expect.it('to eventually have value', 'three'))
+                                    // The double expect.it here so that the 'to satisfy' above doesn't run the expect.it
+                                }
+                            ],
+                            diff: { type: 'missing' }
+                        },
+                        { type: 'ELEMENT', children: [ { type: 'CONTENT', value: 'four' } ] }
+                    ]
+                }
+            });
+        });
+
+        it('diffs a child array where the children are not identical (async)', () => {
+
+            // This test is to specifically test the `similar` handler for async diffs
+            // The aaa is removed, but the bbb is then not identical, causing an "insert"
+
+            return expect(createActual({ name: 'div', attribs: {}, children: [
+                { name: 'aaa', attribs: { className: 'one' }, children: [ 'one' ] },
+                { name: 'bbb', attribs: { className: 'two' }, children: [ 'two' ] },
+                { name: 'ccc', attribs: { className: 'three' }, children: [ 'three' ] },
+                { name: 'ddd', attribs: { className: 'four' }, children: [ 'four' ] },
+            ] }), 'when diffed against', createExpected({ name: 'div', attribs: {}, children: [
+                { name: 'bbb', attribs: { className: 'two', extraAttrib: 'test' }, children: [ expect.it('to eventually have value', 'two') ] },
+                { name: 'ccc', attribs: { className: 'three' }, children: [ expect.it('to eventually have value', 'three') ] },
+                { name: 'ddd', attribs: { className: 'four' }, children: [ expect.it('to eventually have value', 'four') ] }
+            ] }), 'to satisfy', {
+                diff: {
+                    children: [
+                        {
+                            name: 'aaa',
+                            diff: { type: 'extra' }
+                        },
+                        {
+                            name: 'bbb',
+                            attributes: [
+                                { name: 'className' },
+                                { name: 'extraAttrib', diff: { type: 'missing' } }
+                            ],
+                            diff: undefined
+                        },
+                        {
+                            name: 'ccc',
+                            diff: undefined
+                        },
+                        {
+                            name: 'ddd',
+                            diff: undefined
+                        }
+
+                    ]
+                }
+
+            });
+
+        });
+
+        it('diffs a child array where the children are not identical (sync)', () => {
+
+            // This test is to specifically test the `similar` handler for sync diffs
+            // The aaa is removed, but the bbb is then not identical, causing an "insert"
+
+            return expect(createActual({ name: 'div', attribs: {}, children: [
+                { name: 'aaa', attribs: { className: 'one' }, children: [ 'one' ] },
+                { name: 'bbb', attribs: { className: 'two' }, children: [ 'two' ] },
+                { name: 'ccc', attribs: { className: 'three' }, children: [ 'three' ] },
+                { name: 'ddd', attribs: { className: 'four' }, children: [ 'four' ] }
+            ] }), 'when diffed against', createExpected({ name: 'div', attribs: {}, children: [
+                { name: 'bbb', attribs: { className: 'two', extraAttrib: 'test' }, children: [ 'two' ] },
+                { name: 'ccc', attribs: { className: 'three' }, children: [ 'three'] },
+                { name: 'ddd', attribs: { className: 'four' }, children: [ 'four'] }
+            ] }), 'to satisfy', {
+                diff: {
+                    children: [
+                        {
+                            name: 'aaa',
+                            diff: { type: 'extra' }
+                        },
+                        {
+                            name: 'bbb',
+                            attributes: [
+                                { name: 'className' },
+                                { name: 'extraAttrib', diff: { type: 'missing' } }
+                            ],
+                            diff: undefined
+                        },
+                        {
+                            name: 'ccc',
+                            diff: undefined
+                        },
+                        {
+                            name: 'ddd',
+                            diff: undefined
+                        }
+
+                    ]
+                }
+
+            });
+
         });
     });
 

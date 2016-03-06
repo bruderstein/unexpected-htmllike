@@ -36,7 +36,7 @@ const TestActualAdapter = Object.create(TestExpectedAdapter);
 
 TestActualAdapter._checkValidComponentPassed = comp => {
     if (comp.$actual !== actualSymbol) {
-        throw new Error('Non-actual type passed to actual adapter:' + JSON.stringify(comp));
+        throw new Error('Non-actual type passed to actual adapter:' + JSON.stringify(comp) + ' expectedSymbol was ' + (comp.$expected && comp.$expected.toString()));
     }
 };
 

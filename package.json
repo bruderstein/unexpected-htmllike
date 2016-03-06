@@ -24,10 +24,11 @@
     "magicpen": "^5.4.0",
     "magicpen-prism": "^2.2.1",
     "mocha": "^2.3.3",
-    "unexpected": "^10.1.0"
+    "unexpected": "^10.7.0"
   },
   "dependencies": {
-    "array-changes-async": "^2.0.0",
+    "array-changes": "^1.2.1",
+    "array-changes-async": "^2.1.0",
     "object-assign": "^4.0.1"
   },
   "license": "MIT",

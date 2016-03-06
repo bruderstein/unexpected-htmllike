@@ -31,20 +31,39 @@ expect.addType({
     }
 });
 
+function shiftResultOrPromise(resultOrPromise, expect) {
+    if (resultOrPromise && typeof resultOrPromise.then === 'function') {
+        return resultOrPromise.then(result => expect.shift(result));
+    }
+    expect.shift(resultOrPromise);
+}
+
 expect.addAssertion('<TestHtmlElement> when checked to contain <TestHtmlElement> <assertion>', function (expect, subject, value) {
 
-    return Contains(TestActualAdapter, TestExpectedAdapter, subject, value, expect, {}).then(result => {
-        expect.shift(result);
-    });
+    const containsResult = Contains(TestActualAdapter, TestExpectedAdapter, subject, value, expect, {});
+    return shiftResultOrPromise(containsResult, expect);
 });
 
 
 expect.addAssertion('<TestHtmlElement> when checked with options to contain <object> <TestHtmlElement> <assertion>', function (expect, subject, options, value) {
 
-    return Contains(TestActualAdapter, TestExpectedAdapter, subject, value, expect, options).then(result => {
-        expect.shift(result);
-    });
+    const containsResult = Contains(TestActualAdapter, TestExpectedAdapter, subject, value, expect, options);
+    return shiftResultOrPromise(containsResult, expect);
 });
+
+expect.addAssertion('<string> to eventually equal <string>', function (expect, subject, value) {
+    return expect.promise((resolve, reject) => {
+        setTimeout(() => {
+            if (subject === value) {
+                resolve();
+            } else {
+                expect.withError(() => {
+                    expect(subject, 'to equal', value);
+                }, err => reject(err));
+            }
+        }, 50);
+    });
+})
 
 describe('contains', () => {
 
@@ -275,6 +294,41 @@ describe('contains', () => {
                     name: 'span',
                     attribs: {},
                     children: [ 'two' ]
+                }
+            ]
+        }), 'to satisfy', {
+            found: true,
+            bestMatch: {
+                weight: 0
+            }
+        });
+    });
+
+    it('finds a nested component with missing children and extra attribute (async)', () => {
+        return expect(createActual({
+            name: 'div', attribs: {}, children: [
+                {
+                    name: 'span',
+                    attribs: {},
+                    children: [ 'one' ]
+                },
+                {
+                    name: 'span',
+                    attribs: { className: 'dummy' },
+                    children: [ 'two' ]
+                },
+                {
+                    name: 'span',
+                    attribs: {},
+                    children: [ 'three' ]
+                }
+            ]
+        }), 'when checked with options to contain', { diffExtraChildren: false, diffExtraAttributes: false }, createExpected({
+            name: 'div', attribs: {}, children: [
+                {
+                    name: 'span',
+                    attribs: {},
+                    children: [ expect.it('to eventually equal', 'two') ]
                 }
             ]
         }), 'to satisfy', {
