@@ -19,7 +19,7 @@
   "devDependencies": {
     "babel": "^5.8.29",
     "babel-eslint": "^5.0.0",
-    "eslint": "^2.3.0",
+    "eslint": "^2.2.0",
     "eslint-plugin-react": "^4.2.0",
     "magicpen": "^5.7.0",
     "magicpen-prism": "^2.2.1",
