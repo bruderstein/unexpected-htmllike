@@ -13,10 +13,10 @@ React Elements (including JSX), and React shallow renderer.
 
 # Status
 
-Whilst this project is well covered with tests, it has not (yet) seen much real world use. If you find something that doesn't
-diff properly, or you get some unexpected (pun intended) output, then please report it, if you can with the actual / expected HTML/XML 
-syntax that caused the error.  
+This project is now used for production tests in a number of projects.  If you find something that doesn't diff properly,
+please report it in the github issues: https://github.com/bruderstein/unexpected-htmllike/issues
 
+ 
 # Features
 
 
