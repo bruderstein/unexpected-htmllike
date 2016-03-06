@@ -173,6 +173,7 @@ describe('Painter', () => {
             '                                   // {\n' +
             '                                   //   abc: 123,\n' +
             "                                   //   def: 'ghi' // should equal 'ghij'\n" +
+            '                                   //              //\n' +
             '                                   //              // -ghi\n' +
             '                                   //              // +ghij\n' +
             '                                   // }\n' +
