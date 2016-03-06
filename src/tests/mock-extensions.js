@@ -170,7 +170,7 @@ module.exports = {
             expect(subject.bestMatch.output.toString(), 'to equal', value);
         });
 
-// Dummy assertion for testing async expect.it
+        // Dummy assertion for testing async expect.it
         expect.addAssertion('<string> to eventually have value <string>', (expect, subject, value) => {
 
             return expect.promise((resolve, reject) => {
@@ -189,4 +189,4 @@ module.exports = {
             });
         });
     }
-}
+};
