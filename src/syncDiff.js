@@ -16,7 +16,7 @@ function diffElements(actualAdapter, expectedAdapter, actual, expected, expect, 
         options.classAttributeName = actualAdapter.classAttributeName;
     }
 
-    var diffResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, options)
+    var diffResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, options);
     return {
         diff: diffResult.diff,
         weight: diffResult.weight.real
@@ -33,7 +33,7 @@ function diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, 
 
         if (actualChildren.length === 1) {
             // Try as wrapper
-            const wrapperResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actualChildren[0], expected, expect, options)
+            const wrapperResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actualChildren[0], expected, expect, options);
             return DiffCommon.checkElementWrapperResult(actualAdapter, actual, diffResult, wrapperResult, options);
         }
     }
@@ -224,7 +224,7 @@ function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedCh
     let bestDiffResult = null;
 
 
-    const exactDiffResult = tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExact)
+    const exactDiffResult = tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExact);
 
     bestDiffResult = exactDiffResult;
 
@@ -373,4 +373,4 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
 
 export default {
     diffElements
-}
+};

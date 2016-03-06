@@ -33,4 +33,4 @@ describe('promises', () => {
 
         // expect(promise.isFulfilled(), 'to be true');
     });
-})
+});

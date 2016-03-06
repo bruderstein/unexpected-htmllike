@@ -218,7 +218,7 @@ export const diffAttributes = function (actualAttributes, expectedAttributes, ex
         diff: diffResult,
         weight: diffWeights
     };
-}
+};
 
 
 function getClassDiff(actualClasses, expectedClasses, diffResult, weights, options) {

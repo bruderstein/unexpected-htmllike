@@ -450,4 +450,4 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
 
 export default {
     diffElements
-}
+};

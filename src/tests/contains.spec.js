@@ -63,7 +63,7 @@ expect.addAssertion('<string> to eventually equal <string>', function (expect, s
             }
         }, 50);
     });
-})
+});
 
 describe('contains', () => {
 
