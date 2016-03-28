@@ -164,7 +164,7 @@ export default function painter(pen, description, inspect, diffFn) {
                         pen.text(description.value).sp().annotationBlock(function () {
                             pen.addStyle('appendInspected', function (arg) {
                                 this.append(inspect(arg));
-                            });
+                            }, true);
                             this.append(description.diff.error.getErrorMessage(pen));
                         });
                         if (pen.forceLineBreak) {
@@ -288,22 +288,29 @@ function outputAttribute(pen, name, value, diff, inspect, diffFn) {
             case 'changed':
                 outputRawAttribute(pen, name, value, inspect);
                 pen.sp().annotationBlock(pen => {
-                    pen.error('should be ');
-                    outputRawAttribute(pen, name, diff.expectedValue, inspect);
+                    if (diff.error) {
+                        pen.addStyle('appendInspected', function (arg) {
+                            this.append(inspect(arg));
+                        }, true);
+                        pen.append(diff.error.getErrorMessage(pen));
+                    } else {
+                        pen.error('should be ');
+                        outputRawAttribute(pen, name, diff.expectedValue, inspect);
+                        if (typeof value === typeof diff.expectedValue && typeof value !== 'boolean') {
 
-                    if (typeof value === typeof diff.expectedValue && typeof value !== 'boolean') {
-                        const valueDiff = diffFn(value, diff.expectedValue);
+                            const valueDiff = diffFn(value, diff.expectedValue);
 
-                        if (valueDiff && valueDiff.inline) {
-                            pen.nl().block(valueDiff.diff);
-                        } else if (valueDiff) {
-                            pen.nl().block(function () {
-                                this.append(valueDiff.diff);
-                            });
-                        } else {
-                            pen.nl().block(function () {
-                                this.append(inspect(diff.expectedValue));
-                            });
+                            if (valueDiff && valueDiff.inline) {
+                                pen.nl().block(valueDiff.diff);
+                            } else if (valueDiff) {
+                                pen.nl().block(function () {
+                                    this.append(valueDiff.diff);
+                                });
+                            } else {
+                                pen.nl().block(function () {
+                                    this.append(inspect(diff.expectedValue));
+                                });
+                            }
                         }
                     }
                 }).forceLineBreak();
@@ -314,7 +321,7 @@ function outputAttribute(pen, name, value, diff, inspect, diffFn) {
                 pen.sp().annotationBlock(pen => {
                     pen.addStyle('appendInspected', function (arg) {
                         this.append(inspect(arg));
-                    });
+                    }, true);
                     pen.block(diff.error.getErrorMessage(pen));
                 }).forceLineBreak();
 

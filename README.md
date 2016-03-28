@@ -50,8 +50,34 @@ The items that "count" towards a match can be controlled with `options`.
 # Usage
 
 Create an instance of `UnexpectedHtmlLike`, passing an adapter as the only parameter.
-Over the next few days (as of 2015-11-04) a few useful adapters will be released, and listed here.
-You can also write your own (please add to this list if you create one).
+
+Use [`unexpected-htmllike-reactrendered-adapter`](https://github.com/bruderstein/unexpected-htmllike-reactrendered-adapter) for 
+DOM rendered React components, and [`unexpected-htmllike-jsx-adapter`](https://github.com/bruderstein/unexpected-htmllike-jsx-adapter)
+for JSX (ReactElement) adapter - useful for shallow rendering and asserting on JSX structures.
+
+# Example
+
+```js
+expect.addAssertion('<ReactElement> to have rendered <ReactElement>', function (expect, subject, expected) {
+
+    const adapter = new ReactElementAdapter();
+    const jsxHtmlLike = new UnexpectedHtmlLike(adapter);
+
+    const diffResult = jsxHtmlLike.diff(adapter, subject, expected, expect, options);
+
+    return jsxHtmlLike.withResult(diffResult, result => {
+
+        if (result.weight !== 0) {
+            return expect.fail({
+                diff: function (output) {
+                    return {
+                        diff: jsxHtmlLike.render(result, output, expect)
+                    };
+                }
+            });
+        }
+    });
+});
 
 # Adapter API
 
@@ -83,23 +109,20 @@ then the classes can be optionally diffed using class semantics.
 Pass the adapter object (ie. an object with `getName`, `getAttributes`, and `getChildren` methods)
 e.g.
 ```js
-var jsxAdapter = require('unexpected-htmllike-jsx-adapter');
+var JsxAdapter = require('unexpected-htmllike-jsx-adapter');
 var UnexpectedHtmlLike = require('unexpected-htmllike');
 
-var jsxDiff = new UnexpectedHtmlLike(jsxAdapter.create());
+var jsxDiff = new UnexpectedHtmlLike(new JsxAdapter());
 ```
 
 ## inspect(actual, depth, output, inspect)
 Returns a formatted output of the element (`actual`) using [magicpen](https://github.com/sunesimonsen/magicpen)
 Parameters are the same as for the unexpected `inspect` method
 
-## diff(expectedAdapter, actual, expected, output, diff, inspect, equal, options)
-Diffs actual against expected, outputting the output to the magicpen instance `output`. Note that a second adapter
+## diff(expectedAdapter, actual, expected, expect, options)
+Diffs actual against expected, returning either a promise or the diff result. Note that a second adapter
 is passed for the `expected`, such that it is possible to diff two otherwise incompatible representations. If you want
 to diff the same type as the "actual" (e.g. comparing JSX with JSX), simply pass the same adapter as the `expectedAdapter`.
-
-`diff`, `inspect` and `equal` are the functions available from `unexpected`, and are passed everywhere where a diff is
-required, but are also available as `expect.diff`, `expect.inspect`, and `expect.equal`.
 
 `options` can be null, or an object with the following flags (all are optional, and all boolean flags default to true).
 ### diffMissingChildren  (boolean)
@@ -200,32 +223,57 @@ Removing the wrapper, results in
 If `diffWrappers == true`, then `WRAPPER_REMOVED` (== 3) is added to this.
 
 ### Return value
-`diff` returns a promise, which resolves with an object with the following 2 properties:
+`diff` may return a promise, which resolves with an object with the following 2 properties, or it may return the object directly.
+Check for the existence of `then`, if it exists, treat it as a promise.
+
+The returned object, or the resolved value contains the following properties:
 
 * `weight` - the resulting weight from the diff. If this is `0`, the actual and expected match according to the `options` provided.
-* `diff` - the output of the diff, with differences highlighted.
+* `diff` - the internal diff representation. Pass to the `render()` method to actually render the output.
 
-**Note that the promise is always resolved (unless of a bug or a real issue in a assertion), whether a difference is recorded or not.**
+Note that the promise is always resolved (unless of a bug or a real issue in a assertion), whether a difference is recorded or not.**
 To check that the `actual` and `expected` are equivalent (given the options provided), check that the `weight` is zero.
 
-## contains (expectedAdapter, actual, expected, output, diff, inspect, equal, options)
+## contains (expectedAdapter, actual, expected, expect, options)
 
 Checks if the `expected` is contained somewhere within the `actual`. The arguments are the same as the `diff` function,
 including the options for flags and weights (`options` can also be null, to accept the defaults). See the description of `diff`
 for information on the parameters.
 
 ### Return value
-`contains` returns a promise, which resolves with an object, with the following properties
+`contains` returns either a promise that resolves to an object, or the object directly, with the following properties
 * `found` - (boolean) - true if a match was found
 * `bestMatch` - (object) - if `found` is false, `bestMatch` contains the best located match, and is the same result as the `diff` function.
 That is to say that `bestMatch` has the following properties:
 ** `weight` - (number) the weight of the diff - larger numbers indicate a bigger difference (see the description of `diff` above)
-** `diff` - (magicpen) the diff output of the best matching element, against the `expected` value
+** `diff` - the internal diff representation that you can pass to `render()` to output the actual output
 * `bestMatchItem` - this is the element in whatever form the `actual` value takes that matched the best. This could be useful to identify the actual
 node that matched the best, and is provided only for convenience.
 
 **Note that the promise is always resolved (unless of a bug or a real issue in a assertion), whether the content is `found` or not.**
 
+## withResult(value, callback)
+
+Neatly handle the difference between a promise and a value return value.
+e.g. 
+```js
+var diffResult = htmlLike.diff(expectedAdapter, actual, expected, expect, {});
+htmlLike.withResult(diffResult, function (result) {
+
+    // Here `result` is the actual result, whether or not the return value of the `diff`
+    // function was a promise
+    
+    htmlLike.render(result, output, expect);
+});
+```
+
+## render(diffResult, output, expect)
+
+Outputs the given internal diff structure to the given output magicpen instance. 
+
+### Return value
+
+For convenience, it returns the `output` parameter. 
 
 # Contributing
 

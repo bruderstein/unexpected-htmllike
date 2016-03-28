@@ -184,7 +184,9 @@ describe('HtmlLikeComponent', () => {
                 name: 'div', attribs: { id: 'foo' }, children: []
             }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { id: 'bar' }, children: []
-            }), 'to output', '<div id="foo" // should be id="bar"\n' +
+            }), 'to output',
+            "<div id=\"foo\" // expected 'foo' to equal 'bar'\n" +
+            '              //\n' +
             '              // -foo\n' +
             '              // +bar\n' +
             '/>');
@@ -196,7 +198,7 @@ describe('HtmlLikeComponent', () => {
                 name: 'div', attribs: { id: '42' }, children: []
             }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { id: 42 }, children: []
-            }), 'to output with weight', '<div id="42" // should be id={42}\n' +
+            }), 'to output with weight', '<div id="42" // expected \'42\' to equal 42\n' +
             '/>', Diff.DefaultWeights.ATTRIBUTE_MISMATCH);
 
         });
@@ -207,7 +209,8 @@ describe('HtmlLikeComponent', () => {
                 name: 'div', attribs: { id: 'foo', className: 'testing' }, children: []
             }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { id: 'bar', className: 'testing' }, children: []
-            }), 'to output', '<div id="foo" // should be id="bar"\n' +
+            }), 'to output', '<div id="foo" // expected \'foo\' to equal \'bar\'\n' +
+            '              //\n' +
             '              // -foo\n' +
             '              // +bar\n' +
             '   className="testing"\n' +
@@ -220,7 +223,8 @@ describe('HtmlLikeComponent', () => {
                 name: 'div', attribs: { className: 'testing', id: 'foo'  }, children: []
             }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { className: 'testing', id: 'bar' }, children: []
-            }), 'to output', '<div className="testing" id="foo" // should be id="bar"\n' +
+            }), 'to output', '<div className="testing" id="foo" // expected \'foo\' to equal \'bar\'\n' +
+            '                                  //\n' +
             '                                  // -foo\n' +
             '                                  // +bar\n' +
             '/>');
@@ -250,7 +254,8 @@ describe('HtmlLikeComponent', () => {
                 name: 'div', attribs: expectedAttribs, children: []
             }), 'to output', '<div data-attrib1="aaa" data-attrib2="hello world" data-attrib3="testing is fun"\n' +
             '   data-attrib4="hallo welt" data-attrib5="jonny number five"\n' +
-            '   data-mismatch="foo" // should be data-mismatch="bar"\n' +
+            '   data-mismatch="foo" // expected \'foo\' to equal \'bar\'\n' +
+            '                       //\n' +
             '                       // -foo\n' +
             '                       // +bar\n' +
             '   data-after="bbb" data-after2="ccc some more words"\n' +
@@ -356,7 +361,8 @@ describe('HtmlLikeComponent', () => {
                 { name: 'span', attribs: {}, children: ['two'] }
             ]
             }), 'to output with weight', '<div id="foo">\n' +
-            '  <span id="childfoo" // should be id="childbar"\n' +
+            '  <span id="childfoo" // expected \'childfoo\' to equal \'childbar\'\n' +
+            '                      //\n' +
             '                      // -childfoo\n' +
             '                      // +childbar\n' +
             '  >\n' +
@@ -714,7 +720,8 @@ describe('HtmlLikeComponent', () => {
                 }), 'to output with weight', '<body id="main">\n' +
                 '  <div id="wrapper"> // wrapper should be removed\n' +
                 '    <span id="childfoo">one</span>\n' +
-                '    <span id="childfoo" // should be id="other"\n' +
+                '    <span id="childfoo" // expected \'childfoo\' to equal \'other\'\n' +
+                '                        //\n' +
                 '                        // -childfoo\n' +
                 '                        // +other\n' +
                 '    >\n' +

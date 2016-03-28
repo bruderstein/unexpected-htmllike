@@ -70,8 +70,8 @@ module.exports = {
         expect.addAssertion('<TestHtmlLikeActual> when diffed as html against <TestHtmlLikeExpected> <assertion>', (expect, subject, value) => {
 
             const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
-            const pen = expect.output.clone();
-            const promiseOrResult = htmlLikeUnexpected.diff(TestExpectedAdapter, subject, value, pen, expect);
+            //const pen = expect.output.clone();
+            const promiseOrResult = htmlLikeUnexpected.diff(TestExpectedAdapter, subject, value, expect);
             return shiftResultOrPromise(promiseOrResult, expect);
         });
 
@@ -79,16 +79,16 @@ module.exports = {
         expect.addAssertion('<TestHtmlLikeActual> when diffed as html with options against <object> <TestHtmlLikeExpected> <assertion>', (expect, subject, options, value) => {
 
             const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
-            const pen = expect.output.clone();
+            // const pen = expect.output.clone();
 
-            const promiseOrResult = htmlLikeUnexpected.diff(TestExpectedAdapter, subject, value, pen, expect, options);
+            const promiseOrResult = htmlLikeUnexpected.diff(TestExpectedAdapter, subject, value, expect, options);
             return shiftResultOrPromise(promiseOrResult, expect);
         });
 
         expect.addType({
             name: 'HtmlDiffResult',
             base: 'object',
-            identify: value => value && value.output && typeof value.weight === 'number'
+            identify: value => value && typeof value.weight === 'number'
         });
 
         expect.addAssertion('<HtmlDiffResult> to have weight <number>', (expect, subject, weight) => {
@@ -122,11 +122,18 @@ module.exports = {
         });
 
         expect.addAssertion('<HtmlDiffResult> to output <string>', (expect, subject, value) => {
-            expect(subject.output.toString(), 'to equal', value);
+            const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
+            const pen = expect.output.clone();
+            htmlLikeUnexpected.render(subject, pen, expect);
+            expect(pen.toString(), 'to equal', value);
         });
 
         expect.addAssertion('<HtmlDiffResult> to output with weight <string> <number>', (expect, subject, value, weight) => {
-            expect.withError(() => expect(subject.output.toString(), 'to equal', value), e => {
+
+            const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
+            const pen = expect.output.clone();
+            htmlLikeUnexpected.render(subject, pen, expect);
+            expect.withError(() => expect(pen.toString(), 'to equal', value), e => {
                 return expect.fail({
                     diff: function (output, diff, inspect) {
                         return {
@@ -143,13 +150,13 @@ module.exports = {
 
         expect.addAssertion('<TestHtmlLikeActual> when checked to contain <TestHtmlLikeExpected> <assertion>', (expect, subject, value) => {
             const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
-            const resultOrPromise = htmlLikeUnexpected.contains(TestExpectedAdapter, subject, value, expect.output, expect, null);
+            const resultOrPromise = htmlLikeUnexpected.contains(TestExpectedAdapter, subject, value, expect, null);
             return shiftResultOrPromise(resultOrPromise, expect);
         });
 
         expect.addAssertion('<TestHtmlLikeActual> when checked with options to contain <object> <TestHtmlLikeExpected> <assertion>', (expect, subject, options, value) => {
             const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
-            const resultOrPromise = htmlLikeUnexpected.contains(TestExpectedAdapter, subject, value, expect.output, expect, options);
+            const resultOrPromise = htmlLikeUnexpected.contains(TestExpectedAdapter, subject, value, expect, options);
             return shiftResultOrPromise(resultOrPromise, expect);
         });
 
@@ -164,10 +171,13 @@ module.exports = {
         });
 
         expect.addAssertion('<ContainsResult> to output <string>', (expect, subject, value) => {
+
+            const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
+            const pen = expect.output.clone();
+            htmlLikeUnexpected.render(subject.bestMatch, pen, expect);
             expect.errorMode = 'bubble';
             expect(subject.bestMatch, 'not to be null');
-            expect(subject.bestMatch.output, 'to be defined');
-            expect(subject.bestMatch.output.toString(), 'to equal', value);
+            expect(pen.toString(), 'to equal', value);
         });
 
         // Dummy assertion for testing async expect.it

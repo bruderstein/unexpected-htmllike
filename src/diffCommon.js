@@ -155,10 +155,15 @@ export const getElementResult = function (actualName, expectedName, weights, opt
     return diffResult;
 };
 
-export const diffAttributes = function (actualAttributes, expectedAttributes, expect, expectItHandler, options) {
+export const diffAttributes = function (actualAttributes, expectedAttributes, expect, options) {
 
     let diffWeights = new Weights();
     const diffResult = [];
+    // The promises array collects up promises returned from 'to satisfy' assertions
+    // on attributes. The promiseHandler is then called at the end if there are any promises
+    // in the array. If not, everything was synchronous.
+
+    const promises = [];
 
     Object.keys(actualAttributes).forEach(attrib => {
 
@@ -167,23 +172,70 @@ export const diffAttributes = function (actualAttributes, expectedAttributes, ex
 
         if (expectedAttributes.hasOwnProperty(attrib)) {
             const expectedAttrib = expectedAttributes[attrib];
-             if (typeof expectedAttrib === 'function' && expectedAttrib._expectIt) {
-                // This is an assertion in the form of expect.it(...)
 
-                expectItHandler(expectedAttrib, actualAttributes[attrib], attribResult, diffWeights, options);
+            if (attrib === options.classAttributeName && !options.diffExactClasses && typeof expectedAttrib === 'string') {
+                getClassDiff(actualAttributes[attrib], expectedAttributes[attrib], attribResult, diffWeights, options);
+                return;
+            }
 
-            } else if (!expect.equal(actualAttributes[attrib], expectedAttributes[attrib])) {
-                 if (attrib === options.classAttributeName && !options.diffExactClasses) {
-                     getClassDiff(actualAttributes[attrib], expectedAttributes[attrib], attribResult, diffWeights, options);
-                 }
-                 else {
-                     diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
-                     attribResult.diff = {
-                         type: 'changed',
-                         expectedValue: expectedAttributes[attrib]
-                     };
-                 }
-             }
+            let expectResult;
+            let expectError = null;
+            
+            /* Handle a single expect.it() as the attribute value specially.
+             * This improves the output, as it means we don't get the expected 'some attrib value' to satisfy expect.it(....) 
+             * before the real output. 
+             * 
+             * Basically: if this is a single `expect.it()` function, we just want the output from the expect it, 
+             * and not leave it to `to satisfy`
+             */
+            if (typeof expectedAttributes[attrib] === 'function' && expectedAttributes[attrib]._expectIt) {
+                try {
+                    expectResult = expectedAttributes[attrib](actualAttributes[attrib]);
+                } catch (e) {
+                    expectError = e;
+                }
+                
+            } else {
+                try {
+                    expect.errorMode = 'bubble';
+                    const attributesAssertion = options.attributesEqual ? 'to equal' : 'to satisfy';
+
+                    expectResult = expect(actualAttributes[attrib], attributesAssertion, expectedAttributes[attrib]);
+
+                } catch (e) {
+                    expectError = e;
+                }
+            }
+
+            if (expectResult && typeof expectResult.isPending === 'function') {
+                if (expectResult.isPending()) {
+                    promises.push(expectResult.then(() => {}, e => {
+                        diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
+                        attribResult.diff = {
+                            type: 'changed',
+                            expectedValue: expectedAttributes[attrib],
+                            error: e
+                        };
+                    }));
+                } else if (expectResult.isRejected()) {
+                    diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
+                    attribResult.diff = {
+                        type: 'changed',
+                        expectedValue: expectedAttributes[attrib],
+                        error: expectResult.reason
+                    };
+                }
+            } else if (expectError) {
+                diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
+                attribResult.diff = {
+                    type: 'changed',
+                    expectedValue: expectedAttributes[attrib],
+                    error: expectError
+                };
+
+            }
+
+
         } else {
             if (options.diffExtraAttributes && actualAttributes[attrib] !== undefined) {
                 diffWeights.addReal(options.weights.ATTRIBUTE_EXTRA);
@@ -214,6 +266,13 @@ export const diffAttributes = function (actualAttributes, expectedAttributes, ex
         }
     });
 
+    if (promises.length) {
+        return expect.promise.all(promises).then(() => ({
+            diff: diffResult,
+            weight: diffWeights
+        }));
+    }
+    
     return {
         diff: diffResult,
         weight: diffWeights

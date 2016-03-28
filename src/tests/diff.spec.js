@@ -13,7 +13,7 @@ import {
 } from './mockEntities';
 
 
-
+expect.output.preferredWidth = 80;
 
 describe('diff', () => {
 
@@ -62,6 +62,119 @@ describe('diff', () => {
                 weight: Diff.DefaultWeights.ATTRIBUTE_MISMATCH
             }
         );
+    });
+
+    it('diffs attributes with `to satisfy` semantics', () => {
+
+        return expect(
+            createActual({ name: 'Custom', attribs: { data: { a: 1, b: 2, c: [ { nested: true, foo: 'bar' }, { foo: 'baz' } ] } }, children: [] }),
+            'when diffed against',
+            createExpected({ name: 'Custom', attribs: { data: { a: 1, c: [ { foo: 'bar' }, { foo: 'different' } ] } }, children: [] }),
+            'to satisfy',
+            {
+                diff: {
+                    type: 'ELEMENT',
+                    name: 'Custom',
+                    attributes: [
+                        {
+                            name: 'data',
+                            value: { a: 1, b: 2, c: [ { nested: true, foo: 'bar' }, { foo: 'baz' } ] },
+                            diff: {
+                                type: 'changed',
+                                expectedValue: { a: 1, c: [ { foo: 'bar' }, { foo: 'different' } ] },
+                                error: expect.it('to have message', 'expected { a: 1, b: 2, c: [ { nested: true, foo: \'bar\' }, { foo: \'baz\' } ] }\n' +
+                                    'to satisfy { a: 1, c: [ { foo: \'bar\' }, { foo: \'different\' } ] }\n' +
+                                    '\n' +
+                                    '{\n' +
+                                    '  a: 1,\n' +
+                                    '  b: 2,\n' +
+                                    '  c: [\n' +
+                                    '    { nested: true, foo: \'bar\' },\n' +
+                                    '    {\n' +
+                                    '      foo: \'baz\' // should equal \'different\'\n' +
+                                    '                 // -baz\n' +
+                                    '                 // +different\n' +
+                                    '    }\n' +
+                                    '  ]\n' +
+                                    '}')
+                            }
+                        }
+                    ]
+                }
+            }
+        );
+    });
+    
+    it('diffs an attribute with a `to satisfy` async expect.it ', () => {
+        
+        return expect(
+            createActual({ name: 'Custom', attribs: { data: { a: 'test', b: 'foo' } }, children: [] }),
+            'when diffed against',
+            createExpected({ name: 'Custom', attribs: { data: { b: expect.it('to eventually have value', 'bar') } }, children: [] }),
+            'to satisfy',
+            {
+                diff: {
+                    type: 'ELEMENT',
+                    name: 'Custom',
+                    attributes: [
+                        {
+                            name: 'data',
+                            value: { a: 'test', b: 'foo' },
+                            diff: {
+                                type: 'changed',
+                                expectedValue: { b: expect.it('to be a function') },
+                                error: expect.it('to have message', 'expected { a: \'test\', b: \'foo\' }\n' +
+                                    'to satisfy { b: expect.it(\'to eventually have value\', \'bar\') }\n' +
+                                    '\n' +
+                                    '{\n' +
+                                    '  a: \'test\',\n' +
+                                    '  b: \'foo\' // should eventually have value \'bar\'\n' +
+                                    '}')
+                            }
+                        }
+                    ]
+                }
+            }
+        );
+        
+    });
+
+    it('diffs attributes with `to equal` when attributesEqual is passed as an option', () => {
+
+
+        return expect(
+            createActual({ name: 'Custom', attribs: { data: { a: 'test', b: 'foo' } }, children: [] }),
+            'when diffed with options against',
+            { attributesEqual: true },
+            createExpected({ name: 'Custom', attribs: { data: { b: 'foo' } }, children: [] }),
+            'to satisfy',
+            {
+                diff: {
+                    type: 'ELEMENT',
+                    name: 'Custom',
+                    attributes: [
+                        {
+                            name: 'data',
+                            value: { a: 'test', b: 'foo' },
+                            diff: {
+                                type: 'changed',
+                                expectedValue: { b: 'foo' },
+                                error: expect.it('to have message',
+                                    'expected { a: \'test\', b: \'foo\' } to equal { b: \'foo\' }\n' +
+                                    '\n' +
+                                    '{\n' +
+                                    '  a: \'test\', // should be removed\n' +
+                                    '  b: \'foo\'\n' +
+                                    '}')
+
+                            }
+                        }
+                    ]
+                }
+            }
+        );
+
+
     });
 
     it('diffs an extra attribute', () => {
@@ -1209,8 +1322,9 @@ describe('diff', () => {
                         name: 'className',
                         value: 'abcde',
                         diff: {
-                            type: 'custom',
-                            assertion: expect.it('to be a', 'function')
+                            type: 'changed',
+                            expectedValue: expect.it('to be a', 'function'),
+                            error: expect.it('to have message', 'expected \'abcde\' to match /[a-d]+$/')
                         }
                     }]
                 },
@@ -1693,6 +1807,34 @@ describe('diff', () => {
                         weight: Diff.DefaultWeights.OK
                     });
             });
+
+            it('accepts an expect.it for class diffing', () => {
+
+                return expect(createActual({
+                    type: 'ELEMENT',
+                    name:'SomeElement',
+                    attribs: { className: 'one two' },
+                    children: []
+                }), 'when diffed with options against', { diffExactClasses: false, diffMissingClasses: false }, createExpected({
+                    type: 'ELEMENT',
+                    name:'SomeElement',
+                    attribs: { className: expect.it('to match', /one/).and('to match', /two/) },
+                    children: []
+                }), 'to satisfy', {
+                    diff: {
+                        type: 'ELEMENT',
+                        attributes: [
+                            {
+                                name: 'className',
+                                value: 'one two',
+                                diff: undefined
+                            }
+                        ]
+                    },
+                    weight: Diff.DefaultWeights.OK
+                });
+
+            })
 
         });
     });

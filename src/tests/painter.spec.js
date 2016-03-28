@@ -372,6 +372,46 @@ describe('Painter', () => {
             '/>');
     });
 
+    it('outputs a custom error when an attribute fails the `to satisfy`', () => {
+
+        let error;
+        const actual ={ a: 'hello', b: 'foo', c: false } ;
+        const expected = { b: 'bar', c: true };
+        try {
+            expect(actual, 'to satisfy', expected)
+        } catch (e) {
+            error = e;
+        }
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'div',
+            attributes: [
+                {
+                    name: 'data',
+                    value: actual,
+                    diff: {
+                        type: 'changed',
+                        expectedValue: expected,
+                        error: error
+                    }
+                }
+            ]
+        }, expect.inspect, expect.diff);
+        expect(pen.toString(), 'to equal', '<div\n' +
+        "   data={{ a: 'hello', b: 'foo', c: false }} // expected { a: 'hello', b: 'foo', c: false } to satisfy { b: 'bar', c: true }\n" +
+        '                                             //\n' +
+        '                                             // {\n' +
+        "                                             //   a: 'hello',\n" +
+        "                                             //   b: 'foo', // should equal 'bar'\n" +
+        '                                             //             // -foo\n' +
+        '                                             //             // +bar\n' +
+        '                                             //   c: false // should equal true\n' +
+        '                                             // }\n' +
+        '/>')
+
+    });
+
     it('outputs many attributes over multiple lines', () => {
 
         Painter(pen, {
