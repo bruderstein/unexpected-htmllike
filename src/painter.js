@@ -4,7 +4,7 @@ import isNativeType from './isNativeType';
 
 const WRAP_WIDTH = 80;
 
-export default function painter(pen, description, inspect, diffFn) {
+export default function painter(pen, description, diffFn, inspect) {
 
     if (description.diff) {
 
@@ -23,7 +23,7 @@ export default function painter(pen, description, inspect, diffFn) {
                             value: description.value,
                             attributes: description.attributes,
                             children: description.children
-                        }, inspect, diffFn);
+                        }, diffFn, inspect);
                     });
                 });
                 return;
@@ -38,7 +38,7 @@ export default function painter(pen, description, inspect, diffFn) {
                     value: description.value,
                     attributes: description.attributes,
                     children: description.children
-                }, inspect, diffFn);
+                }, diffFn, inspect);
                 pen.block(removedElementPen).sp().annotationBlock(function () {
                     this.error('should be removed');
                     this.nl(removedElementPen.size().height - 1).i();
@@ -101,7 +101,7 @@ export default function painter(pen, description, inspect, diffFn) {
                 pen.text(description.value).sp().annotationBlock(function () {
                     this.error('should be').sp();
                     const expectedPen = pen.clone();
-                    painter(expectedPen, description.diff.expected, inspect, diffFn);
+                    painter(expectedPen, description.diff.expected, diffFn, inspect);
                     this.block(expectedPen);
                 });
                 return;
@@ -255,7 +255,7 @@ function outputChildren(pen, description, inspect, diffFn, forcedOnNewLine) {
         const child = description.children[childIndex];
 
         childrenOutput.add(childPen => {
-            painter(childPen, child, inspect, diffFn);
+            painter(childPen, child, diffFn, inspect);
         });
     }
     const childrenResultOutput = childrenOutput.getOutput();

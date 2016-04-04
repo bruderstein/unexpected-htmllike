@@ -7,7 +7,7 @@ import convertToDiff from './convertToDiff';
 function inspect(adapter, value, depth, output, externalInspector) {
 
     const diffDescription = convertToDiff(adapter, value);
-    Painter(output, diffDescription, externalInspector, null /* no diff function required */);
+    Painter(output, diffDescription, null, externalInspector);
     return output;
 }
 
@@ -29,8 +29,8 @@ function getContains(actualAdapter) {
 }
 
 
-function render(diffResult, output, expect) {
-    Painter(output, diffResult.diff, expect.inspect.bind(expect), expect.diff.bind(expect));
+function render(diffResult, output, diff, inspect) {
+    Painter(output, diffResult.diff, diff, inspect);
     return output;
 }
 
