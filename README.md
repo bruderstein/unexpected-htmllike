@@ -69,9 +69,9 @@ expect.addAssertion('<ReactElement> to have rendered <ReactElement>', function (
 
         if (result.weight !== 0) {
             return expect.fail({
-                diff: function (output) {
+                diff: function (output, diff, inspect) {
                     return {
-                        diff: jsxHtmlLike.render(result, output, expect)
+                        diff: jsxHtmlLike.render(result, output, diff, inspect)
                     };
                 }
             });
@@ -263,13 +263,15 @@ htmlLike.withResult(diffResult, function (result) {
     // Here `result` is the actual result, whether or not the return value of the `diff`
     // function was a promise
     
-    htmlLike.render(result, output, expect);
+    htmlLike.render(result, output, diff, inspect);
 });
 ```
 
-## render(diffResult, output, expect)
+## render(diffResult, output, diff, inspect)
 
 Outputs the given internal diff structure to the given output magicpen instance. 
+`diff` and `inspect` should be the functions passed in to the `diff` function, but in most cases can
+be the `expect.diff` and `expect.inspect` variants (keep in mind this won't always work, and is not recommended)
 
 ### Return value
 
