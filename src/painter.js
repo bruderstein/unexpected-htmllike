@@ -283,6 +283,7 @@ function outputAttribute(pen, name, value, diff, inspect, diffFn) {
 
 
     if (diff) {
+        pen.sp();
         switch(diff.type) {
             case 'changed':
                 outputRawAttribute(pen, name, value, inspect);
@@ -348,7 +349,8 @@ function outputAttribute(pen, name, value, diff, inspect, diffFn) {
                     }
                 }).forceLineBreak();
         }
-    } else {
+    } else if (value !== undefined) {
+        pen.sp();
         outputRawAttribute(pen, name, value, inspect);
     }
 }
@@ -404,7 +406,6 @@ function outputAttributes(pen, attributes, inspect, diffFn) {
 
     attributes.forEach(attrib => {
         attribOutput.add(pen => {
-            pen.sp();
             outputAttribute(pen, attrib.name, attrib.value, attrib.diff, inspect, diffFn);
         });
     });

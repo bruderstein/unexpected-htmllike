@@ -60,6 +60,36 @@ describe('Painter', () => {
         expect(pen.toString(), 'to equal',
             '<div id="abc" className="foo" />');
     });
+    
+    it('skips outputting attributes that are undefined', () => {
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'div',
+            attributes: [
+                { name: 'id', value: undefined },
+                { name: 'className', value: 'foo' }
+            ]
+        }, expect.inspect);
+
+        expect(pen.toString(), 'to equal',
+            '<div className="foo" />');
+    });
+    
+    it('skips outputting attributes that are undefined', () => {
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'div',
+            attributes: [
+                { name: 'id', value: undefined },
+                { name: 'className', value: 'foo' }
+            ]
+        }, expect.inspect);
+
+        expect(pen.toString(), 'to equal',
+            '<div className="foo" />');
+    });
 
     it('outputs a single empty element with object attributes', () => {
 
