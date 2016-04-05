@@ -6,6 +6,10 @@ module.exports = function (wallaby) {
 
     return {
         files: [
+            {
+                pattern: 'src/tests/no-instrument/*.js',
+                instrument: false
+            },
             'src/**/*.js',
             {
                 pattern: 'src/**/tests/*.spec.js',

@@ -357,15 +357,45 @@ function outputRawAttribute(pen, name, value, inspect) {
 
     pen.prismAttrName(name)
         .prismPunctuation('=');
-    if (typeof value === 'string') {
-        pen.prismPunctuation('"')
-            .prismAttrValue(value)
-            .prismPunctuation('"');
-    } else {
-        pen.prismPunctuation('{')
-            .prismAttrValue(inspect(value))
-            .prismPunctuation('}');
+
+
+    switch(typeof value) {
+        case 'string':
+            pen.prismPunctuation('"')
+                .prismAttrValue(value)
+                .prismPunctuation('"');
+            break;
+
+        case 'function':
+            pen.prismPunctuation('{');
+            outputFunctionAttribute(pen, value, inspect);
+            pen.prismPunctuation('}');
+            break;
+        default:
+            pen.prismPunctuation('{')
+                .prismAttrValue(inspect(value))
+                .prismPunctuation('}');
+            break;
     }
+}
+
+function outputFunctionAttribute(pen, value, inspect) {
+
+    var source = value.toString();
+    var matchSource = source.match(/^\s*function (\w*?)\s*\(([^\)]*)\)\s*\{([\s\S]*?( *)?)\}\s*$/);
+    var name = (typeof value.name === 'string' && value.name) || matchSource[1];
+    var args = matchSource[2];
+    var body = matchSource[3];
+    if (body.indexOf('\n') !== -1 || body.length > 30) {
+        pen.prismKeyword('function ')
+            .prismVariable(name)
+            .prismPunctuation('(')
+            .prismVariable(args)
+            .prismPunctuation(') { /* ... */ }');
+    } else {
+        pen.append(inspect(value));
+    }
+
 }
 
 function outputAttributes(pen, attributes, inspect, diffFn) {

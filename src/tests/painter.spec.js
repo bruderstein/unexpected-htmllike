@@ -4,6 +4,8 @@ import MagicPenPrism from 'magicpen-prism';
 
 import Painter from '../painter';
 
+import { shortFunc, longFunc, longFunc2, longSingleLine, shortMultiLine } from './no-instrument/functions';
+
 const expect = Unexpected
     .clone()
     .use(MagicPenPrism);
@@ -93,6 +95,91 @@ describe('Painter', () => {
             '   style={{ width: 100, height: 200 }} role="button-with-a-long-name"\n' +
             '/>');
     });
+    
+    it('outputs a long function attribute without a body', () => {
+        
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'MyComponent',
+            attributes: [
+                { name: 'onClick', value: function handleClick(a, b) {
+                   console.log(a + b, 'This is a long function');
+                    console.log('with many lines');
+                } }
+            ]
+        }, expect.diff, expect.inspect);
+
+        expect(pen.toString(), 'to equal',
+            '<MyComponent onClick={function handleClick(a, b) { /* ... */ }} />');
+        
+    });
+
+
+    it('outputs a short one line function attribute with a body', () => {
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'MyComponent',
+            attributes: [
+                { name: 'onClick', value: shortFunc }
+            ]
+        }, expect.inspect, expect.diff);
+
+        expect(pen.toString(), 'to equal',
+            '<MyComponent onClick={function shortFunc(a, b) { return a + b; }} />');
+
+    });
+
+    it('outputs a short multi line function attribute without a body', () => {
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'MyComponent',
+            attributes: [
+                { name: 'onClick', value: shortMultiLine }
+            ]
+        }, expect.diff, expect.inspect);
+
+        expect(pen.toString(), 'to equal',
+            '<MyComponent onClick={function shortMultiLine(a, b) { /* ... */ }} />');
+
+    });
+
+    it('outputs a long single line function attribute without a body', () => {
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'MyComponent',
+            attributes: [
+                { name: 'onClick', value: longSingleLine }
+            ]
+        }, expect.diff, expect.inspect);
+
+        expect(pen.toString(), 'to equal',
+            '<MyComponent onClick={function longSingleLine(a, b) { /* ... */ }} />');
+
+    });
+
+    it('outputs a difference long function attribute with a body', () => {
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'MyComponent',
+            attributes: [
+                { name: 'onClick', value: longFunc, diff: { type: 'changed', expectedValue: longFunc2 } }
+            ]
+        }, expect.inspect, expect.diff);
+
+        expect(pen.toString(), 'to equal',
+            '<MyComponent\n' +
+            '   onClick={function longFunc(a, b) { /* ... */ }} // should be onClick={function longFunc2(a, b) { /* ... */ }}\n' +
+            '                                                   // function longFunc2(a, b) {\n' +
+            '                                                   //   console.log(\'This ia long func\', a + b);\n' +
+            '                                                   //   console.log(\'With multiple lines that are different\');\n' +
+            '                                                   // }\n' +
+            '/>');
+
+    });
 
     it('outputs a changed attribute', () => {
 
@@ -173,7 +260,6 @@ describe('Painter', () => {
             '                                   // {\n' +
             '                                   //   abc: 123,\n' +
             "                                   //   def: 'ghi' // should equal 'ghij'\n" +
-            '                                   //              //\n' +
             '                                   //              // -ghi\n' +
             '                                   //              // +ghij\n' +
             '                                   // }\n' +
