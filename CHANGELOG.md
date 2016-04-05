@@ -32,4 +32,12 @@ order is unimportant, and optionally extra and/or missing classes can be ignored
 * Fix for moved elements when actual and expected adapters are different (bruderstein/unexpected-react#9) 
 (thanks to @yormi for an excellent bug report!)
 
+### v1.0.0
+* Split sync and async - everything is tried synchronously initially (which is much faster), then if an asynchronous 
+assertion is detected, revert to the async algorithm.  This results is a big performance boost for the majority of 
+cases where the comparisons can all be done synchronously.  The return values of the functions are now possibly-promises.
+i.e. Caller need to check if they are a promise (existence of `result.then` is fine), and treat it as a promise.
 
+### v1.1.0
+* Remove function body for long functions (more than one line or > 30 chars) (#2)
+* Do not output attributes that have an undefined value (#1)
