@@ -75,22 +75,6 @@ describe('Painter', () => {
         expect(pen.toString(), 'to equal',
             '<div className="foo" />');
     });
-    
-    it('skips outputting attributes that are undefined', () => {
-
-        Painter(pen, {
-            type: 'ELEMENT',
-            name: 'div',
-            attributes: [
-                { name: 'id', value: undefined },
-                { name: 'className', value: 'foo' }
-            ]
-        }, expect.inspect);
-
-        expect(pen.toString(), 'to equal',
-            '<div className="foo" />');
-    });
-
     it('outputs a single empty element with object attributes', () => {
 
         Painter(pen, {
@@ -153,7 +137,7 @@ describe('Painter', () => {
             attributes: [
                 { name: 'onClick', value: shortFunc }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<MyComponent onClick={function shortFunc(a, b) { return a + b; }} />');
@@ -183,7 +167,7 @@ describe('Painter', () => {
             attributes: [
                 { name: 'onClick', value: longSingleLine }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<MyComponent onClick={function longSingleLine(a, b) { /* ... */ }} />');
@@ -198,7 +182,7 @@ describe('Painter', () => {
             attributes: [
                 { name: 'onClick', value: expect.it('to be a function') }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<MyComponent onClick={expect.it(\'to be a function\')} />');
@@ -212,7 +196,7 @@ describe('Painter', () => {
             attributes: [
                 { name: 'onClick', value: longFunc, diff: { type: 'changed', expectedValue: longFunc2 } }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<MyComponent\n' +
