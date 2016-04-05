@@ -383,6 +383,11 @@ function outputRawAttribute(pen, name, value, inspect) {
 
 function outputFunctionAttribute(pen, value, inspect) {
 
+    if (value._expectIt) {
+        pen.append(inspect(value));
+        return;
+    }
+    
     var source = value.toString();
     var matchSource = source.match(/^\s*function (\w*?)\s*\(([^\)]*)\)\s*\{([\s\S]*?( *)?)\}\s*$/);
     var name = (typeof value.name === 'string' && value.name) || matchSource[1];

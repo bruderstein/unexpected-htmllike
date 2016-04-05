@@ -183,11 +183,25 @@ describe('Painter', () => {
             attributes: [
                 { name: 'onClick', value: longSingleLine }
             ]
-        }, expect.diff, expect.inspect);
+        }, expect.inspect, expect.diff);
 
         expect(pen.toString(), 'to equal',
             '<MyComponent onClick={function longSingleLine(a, b) { /* ... */ }} />');
 
+    });
+
+    it('outputs an expect.it assertion as an assertion and not a function', () => {
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'MyComponent',
+            attributes: [
+                { name: 'onClick', value: expect.it('to be a function') }
+            ]
+        }, expect.inspect, expect.diff);
+
+        expect(pen.toString(), 'to equal',
+            '<MyComponent onClick={expect.it(\'to be a function\')} />');
     });
 
     it('outputs a difference long function attribute with a body', () => {
