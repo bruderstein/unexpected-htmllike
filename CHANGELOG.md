@@ -41,3 +41,12 @@ i.e. Caller need to check if they are a promise (existence of `result.then` is f
 ### v1.1.0
 * Remove function body for long functions (more than one line or > 30 chars) (#2)
 * Do not output attributes that have an undefined value (#1)
+
+### v2.0.0
+* Breaking changes to API
+  * diff, contains now take less parameters (see README.md)
+* Split between diffing / contains checking and rendering.  New `render()` method
+* Helper `withResult()` method to aid handling the possible-promises that are returned from the diffing and contains APIs
+* Attributes now diffed with 'to satisfy'
+
+

@@ -23,7 +23,7 @@ function duplicate(object, count) {
 expect.addAssertion('<object> to output <string>', function (expect, subject, result) {
 
     const pen = expect.output.clone();
-    Painter(pen, subject, expect.inspect.bind(expect), expect.diff.bind(expect));
+    Painter(pen, subject, expect.diff.bind(expect), expect.inspect.bind(expect));
     expect(pen.toString(), 'to equal', result);
 });
 
@@ -40,7 +40,7 @@ describe('Painter', () => {
         Painter(pen, {
             type: 'ELEMENT',
             name: 'div'
-        }, expect.inspect);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
         '<div />');
@@ -55,7 +55,7 @@ describe('Painter', () => {
                 { name: 'id', value: 'abc' },
                 { name: 'className', value: 'foo' }
             ]
-        }, expect.inspect);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div id="abc" className="foo" />');
@@ -75,22 +75,6 @@ describe('Painter', () => {
         expect(pen.toString(), 'to equal',
             '<div className="foo" />');
     });
-    
-    it('skips outputting attributes that are undefined', () => {
-
-        Painter(pen, {
-            type: 'ELEMENT',
-            name: 'div',
-            attributes: [
-                { name: 'id', value: undefined },
-                { name: 'className', value: 'foo' }
-            ]
-        }, expect.inspect);
-
-        expect(pen.toString(), 'to equal',
-            '<div className="foo" />');
-    });
-
     it('outputs a single empty element with object attributes', () => {
 
         Painter(pen, {
@@ -100,7 +84,7 @@ describe('Painter', () => {
                 { name: 'id', value: 'abc' },
                 { name: 'style', value: { width: 100, height: 200 } }
             ]
-        }, expect.inspect);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div id="abc" style={{ width: 100, height: 200 }} />');
@@ -118,7 +102,7 @@ describe('Painter', () => {
                 { name: 'style', value: { width: 100, height: 200 } },
                 { name: 'role', value: 'button-with-a-long-name' }
             ]
-        }, expect.inspect);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div id="abc" className="foo bah gah blah cheese" another="big long attribute value"\n' +
@@ -153,7 +137,7 @@ describe('Painter', () => {
             attributes: [
                 { name: 'onClick', value: shortFunc }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<MyComponent onClick={function shortFunc(a, b) { return a + b; }} />');
@@ -183,7 +167,7 @@ describe('Painter', () => {
             attributes: [
                 { name: 'onClick', value: longSingleLine }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<MyComponent onClick={function longSingleLine(a, b) { /* ... */ }} />');
@@ -198,7 +182,7 @@ describe('Painter', () => {
             attributes: [
                 { name: 'onClick', value: expect.it('to be a function') }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<MyComponent onClick={expect.it(\'to be a function\')} />');
@@ -212,7 +196,7 @@ describe('Painter', () => {
             attributes: [
                 { name: 'onClick', value: longFunc, diff: { type: 'changed', expectedValue: longFunc2 } }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<MyComponent\n' +
@@ -233,7 +217,7 @@ describe('Painter', () => {
             attributes: [
                 { name: 'id', value: 'abc', diff: { type: 'changed', expectedValue: '123' } }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div id="abc" // should be id="123"\n' +
@@ -250,7 +234,7 @@ describe('Painter', () => {
             attributes: [
                 { name: 'id', value: '123', diff: { type: 'changed', expectedValue: 123 } }
             ]
-        }, expect.inspect);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div id="123" // should be id={123}\n' +
@@ -265,7 +249,7 @@ describe('Painter', () => {
             attributes: [
                 { name: 'id', value: '123', diff: { type: 'changed', expectedValue: 1234 } }
             ]
-        }, expect.inspect);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div id="123" // should be id={1234}\n' +
@@ -281,7 +265,7 @@ describe('Painter', () => {
             attributes: [
                 { name: 'disabled', value: true, diff: { type: 'changed', expectedValue: false } }
             ]
-        }, expect.inspect);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div disabled={true} // should be disabled={false}\n' +
@@ -297,7 +281,7 @@ describe('Painter', () => {
             attributes: [
                 { name: 'id', value: { abc: 123, def: 'ghi' }, diff: { type: 'changed', expectedValue: { abc: 123, def: 'ghij' } } }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             "<div id={{ abc: 123, def: 'ghi' }} // should be id={{ abc: 123, def: 'ghij' }}\n" +
@@ -318,7 +302,7 @@ describe('Painter', () => {
             attributes: [
                 { name: 'id', diff: { type: 'missing', expectedValue: '123' } }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div // missing id="123"\n' +
@@ -334,7 +318,7 @@ describe('Painter', () => {
             attributes: [
                 { name: 'id', value:'abc', diff: { type: 'extra' } }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div id="abc" // id should be removed\n' +
@@ -360,7 +344,7 @@ describe('Painter', () => {
                     }
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div // missing id={{\n' +
@@ -370,6 +354,46 @@ describe('Painter', () => {
             '     //   id: 42\n' +
             '     // }}\n' +
             '/>');
+    });
+
+    it('outputs a custom error when an attribute fails the `to satisfy`', () => {
+
+        let error;
+        const actual ={ a: 'hello', b: 'foo', c: false } ;
+        const expected = { b: 'bar', c: true };
+        try {
+            expect(actual, 'to satisfy', expected)
+        } catch (e) {
+            error = e;
+        }
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'div',
+            attributes: [
+                {
+                    name: 'data',
+                    value: actual,
+                    diff: {
+                        type: 'changed',
+                        expectedValue: expected,
+                        error: error
+                    }
+                }
+            ]
+        }, expect.diff, expect.inspect);
+        expect(pen.toString(), 'to equal', '<div\n' +
+        "   data={{ a: 'hello', b: 'foo', c: false }} // expected { a: 'hello', b: 'foo', c: false } to satisfy { b: 'bar', c: true }\n" +
+        '                                             //\n' +
+        '                                             // {\n' +
+        "                                             //   a: 'hello',\n" +
+        "                                             //   b: 'foo', // should equal 'bar'\n" +
+        '                                             //             // -foo\n' +
+        '                                             //             // +bar\n' +
+        '                                             //   c: false // should equal true\n' +
+        '                                             // }\n' +
+        '/>')
+
     });
 
     it('outputs many attributes over multiple lines', () => {
@@ -386,7 +410,7 @@ describe('Painter', () => {
                 type: 'CONTENT',
                 value: 'one'
             }]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div id="very-long-attribute-value" data-value1="very-long-attribute-value"\n' +
@@ -415,7 +439,7 @@ describe('Painter', () => {
                 }
             ],
             children: [ { type: 'CONTENT', value: 'some text' }]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div // missing id={{\n' +
@@ -439,7 +463,7 @@ describe('Painter', () => {
                   name: 'span'
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div><span /></div>');
@@ -456,7 +480,7 @@ describe('Painter', () => {
                 { type: 'ELEMENT',
                     name: 'span'
                 }, 12)
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>\n' +
@@ -489,7 +513,7 @@ describe('Painter', () => {
                     ]
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
         '<div>\n' +
@@ -514,7 +538,7 @@ describe('Painter', () => {
                     ]
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>\n' +
@@ -534,7 +558,7 @@ describe('Painter', () => {
                     value: 'abc'
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>abc</div>');
@@ -552,7 +576,7 @@ describe('Painter', () => {
                     value: 42
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>42</div>');
@@ -570,7 +594,7 @@ describe('Painter', () => {
                 attributes: [{ name: 'className', value: 'foo' }],
                 children: [{ type: 'CONTENT', value: 'text content' }]
             }, 3)
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>\n' +
@@ -594,7 +618,7 @@ describe('Painter', () => {
                     { type: 'ELEMENT', name: 'strong', children: [ { type: 'CONTENT', value: 'text content' }] }
                 ]
             }, 3)
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>\n' +
@@ -619,7 +643,7 @@ describe('Painter', () => {
                     }
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>\n' +
@@ -644,7 +668,7 @@ describe('Painter', () => {
                     }
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>\n' +
@@ -669,7 +693,7 @@ describe('Painter', () => {
                     }
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>\n' +
@@ -694,7 +718,7 @@ describe('Painter', () => {
                     }
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
         '<div>\n' +
@@ -727,7 +751,7 @@ describe('Painter', () => {
                     attributes: [ { name: 'className', value: 'foo' } ]
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>\n' +
@@ -752,7 +776,7 @@ describe('Painter', () => {
                     }
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>\n' +
@@ -781,7 +805,7 @@ describe('Painter', () => {
                     }
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>\n' +
@@ -816,7 +840,7 @@ describe('Painter', () => {
                     attributes: [ { name: 'className', value: 'foo' } ]
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>\n' +
@@ -840,7 +864,7 @@ describe('Painter', () => {
                     }
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>\n' +
@@ -862,7 +886,7 @@ describe('Painter', () => {
                     }
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>\n' +
@@ -885,7 +909,7 @@ describe('Painter', () => {
                     }
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>\n' +
@@ -907,7 +931,7 @@ describe('Painter', () => {
                     }
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div>\n' +
@@ -932,7 +956,7 @@ describe('Painter', () => {
                     children: [ { type: 'CONTENT', value: 'some text' } ]
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div> // wrapper should be removed\n' +
@@ -960,7 +984,7 @@ describe('Painter', () => {
                     } ]
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div> // wrapper should be removed\n' +
@@ -983,7 +1007,7 @@ describe('Painter', () => {
                     children: [ { type: 'CONTENT', value: 'some text' } ]
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div className="foo">\n' +
@@ -1004,7 +1028,7 @@ describe('Painter', () => {
                     children: [ { type: 'CONTENT', value: 'some text' } ]
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen, 'to equal',
             expect.output.clone().gray('<div className="foo">')
@@ -1031,7 +1055,7 @@ describe('Painter', () => {
                 type: 'differentElement',
                 expectedName: 'span'
             }
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div // should be <span\n' +
@@ -1056,7 +1080,7 @@ describe('Painter', () => {
                     } ]
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div // should be <span\n' +
@@ -1088,7 +1112,7 @@ describe('Painter', () => {
                     } ]
                 }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div // should be <span\n' +
@@ -1110,7 +1134,7 @@ describe('Painter', () => {
             children: [
                 { type: 'CONTENT', value: 'some text' }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div // should be <span\n' +
@@ -1149,7 +1173,7 @@ describe('Painter', () => {
                 },
                 { type: 'ELEMENT', name: 'span', children: [ { type: 'CONTENT', value: 'some text' } ] }
             ]
-    }, expect.inspect, expect.diff);
+    }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<body>\n' +
@@ -1177,7 +1201,7 @@ describe('Painter', () => {
                     ]
                 }
             }
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
         'some content // should be <div className="foo">some text</div>');
@@ -1203,7 +1227,7 @@ describe('Painter', () => {
                     ]
                 }
             }
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             'some content // should be <div className="foo">\n' +
@@ -1238,7 +1262,7 @@ describe('Painter', () => {
                 }
             }
         ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
         '<div>\n' +
@@ -1264,7 +1288,7 @@ describe('Painter', () => {
             children: [
                 { type: 'CONTENT', value: 'some text' }
             ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div className="foo">some text</div> // should be \'some content\'');
@@ -1295,7 +1319,7 @@ describe('Painter', () => {
                     value: 'some content'
                 }
             }
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
             '<div className="foo">                                            // should be \'some content\'\n' +
@@ -1331,7 +1355,7 @@ describe('Painter', () => {
                 }
             }
         ]
-        }, expect.inspect, expect.diff);
+        }, expect.diff, expect.inspect);
 
         expect(pen.toString(), 'to equal',
         '<div id="foo">\n' +
@@ -1404,7 +1428,7 @@ describe('Painter', () => {
                     }
                 ],
                 children: []
-            }, expect.inspect, expect.diff);
+            }, expect.diff, expect.inspect);
 
             expect(pen.toString(), 'to equal',
                 '<div className="one two three" // extra class \'two\'\n' +
@@ -1427,7 +1451,7 @@ describe('Painter', () => {
                     }
                 ],
                 children: []
-            }, expect.inspect, expect.diff);
+            }, expect.diff, expect.inspect);
 
             expect(pen.toString(), 'to equal',
                 '<div className="one three" // missing class \'cheese\'\n' +
@@ -1451,7 +1475,7 @@ describe('Painter', () => {
                     }
                 ],
                 children: []
-            }, expect.inspect, expect.diff);
+            }, expect.diff, expect.inspect);
 
             expect(pen.toString(), 'to equal',
                 '<div className="one three" // missing class \'cheese\'\n' +
@@ -1475,7 +1499,7 @@ describe('Painter', () => {
                     }
                 ],
                 children: []
-            }, expect.inspect, expect.diff);
+            }, expect.diff, expect.inspect);
 
             expect(pen.toString(), 'to equal',
                 '<div className="one three two" // extra classes \'two three\'\n' +
@@ -1498,7 +1522,7 @@ describe('Painter', () => {
                     }
                 ],
                 children: []
-            }, expect.inspect, expect.diff);
+            }, expect.diff, expect.inspect);
 
             expect(pen.toString(), 'to equal',
                 '<div className="one three" // missing classes \'cheese another\'\n' +

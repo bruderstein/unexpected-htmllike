@@ -1,5 +1,4 @@
 
-import isNativeType from './isNativeType';
 import diff from './diff';
 import Painter from './painter';
 import Contains from './contains';
@@ -8,61 +7,49 @@ import convertToDiff from './convertToDiff';
 function inspect(adapter, value, depth, output, externalInspector) {
 
     const diffDescription = convertToDiff(adapter, value);
-    Painter(output, diffDescription, externalInspector, null /* no diff function required */);
+    Painter(output, diffDescription, null, externalInspector);
     return output;
 }
 
 function getDiff(actualAdapter) {
 
-    return function (expectedAdapter, actual, expected, output, expect, options) {
+    return function (expectedAdapter, actual, expected, expect, options) {
 
-        const result = diff.diffElements(actualAdapter, expectedAdapter, actual, expected, expect, options);
-
-        const outputResult = function (diffResult, expect) {
-
-            const pen = output.clone();
-            Painter(pen, diffResult.diff, expect.inspect.bind(expect), expect.diff.bind(expect));
-
-            return {
-                output: pen,
-                diff: diffResult.diff,
-                weight: diffResult.weight
-            };
-        };
-
-        if (result && typeof result.then === 'function') {
-            // Result was a promise, must have been async
-
-            return result.then(diffResult => {
-                const paintedOutput = outputResult(diffResult, expect);
-                return paintedOutput;
-            });
-        }
-
-        // Returned result directly, hence everything was doable sync
-        return outputResult(result, expect);
+        return diff.diffElements(actualAdapter, expectedAdapter, actual, expected, expect, options);
     };
 }
 
+
 function getContains(actualAdapter) {
 
-    return function (expectedAdapter, actual, expected, output, expect, options) {
+    return function (expectedAdapter, actual, expected, expect, options) {
 
-        const result = Contains(actualAdapter, expectedAdapter, actual, expected, expect, options);
-
-        const convertOutput = containsResult => {
-            if (containsResult.bestMatch) {
-                const pen = output.clone();
-                Painter(pen, containsResult.bestMatch.diff, expect.inspect.bind(expect), expect.diff.bind(expect));
-                containsResult.bestMatch.output = pen;
-            }
-            return containsResult;
-        };
-        if (result && typeof result.then === 'function') {
-            return result.then(containsResult => convertOutput(containsResult));
-        }
-        return convertOutput(result);
+        return Contains(actualAdapter, expectedAdapter, actual, expected, expect, options);
     };
+}
+
+
+function render(diffResult, output, diff, inspect) {
+    Painter(output, diffResult.diff, diff, inspect);
+    return output;
+}
+
+
+function withResult(result, callback) {
+
+    if (result && typeof result.then === 'function') {
+        // Result was a promise, must have been async
+        // If it's a sync promise, callback immediately with the value
+        if (result.isResolved()) {
+            return callback(result.value);
+        }
+
+        return result.then(resolved => {
+            return callback(resolved);
+        });
+    }
+
+    return callback(result);
 }
 
 
@@ -71,7 +58,9 @@ function HtmlLikeUnexpected(adapter) {
     return {
         inspect: inspect.bind(null, adapter),
         diff: getDiff(adapter),
-        contains: getContains(adapter)
+        contains: getContains(adapter),
+        render: render,
+        withResult: withResult
     };
 }
 

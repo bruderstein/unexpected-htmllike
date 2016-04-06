@@ -115,7 +115,12 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
 
     diffResult = DiffCommon.getElementResult(actualName, expectedName, weights, options);
 
-    const attributesResult = DiffCommon.diffAttributes(actualAdapter.getAttributes(actual), expectedAdapter.getAttributes(expected), expect, attributeExpectItHandler, options);
+    const attributesResult = DiffCommon.diffAttributes(actualAdapter.getAttributes(actual), expectedAdapter.getAttributes(expected), expect, options);
+    if (typeof attributesResult.then === 'function') {
+        // Promise returned, we need to do this async
+        throw new RequiresAsyncError();
+    }
+    
     diffResult.attributes = attributesResult.diff;
     weights.addWeight(attributesResult.weight);
 
@@ -129,28 +134,6 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
         weight: weights
     };
 
-}
-
-function attributeExpectItHandler(assertion, actualValue, attribResult, weights, options) {
-
-    let expectItResult;
-    try {
-        expectItResult = assertion(actualValue);
-    } catch (e) {
-
-        attribResult.diff = {
-            type: 'custom',
-            assertion: assertion,
-            error: e
-        };
-
-        weights.add(options.weights.ATTRIBUTE_MISMATCH);
-    }
-
-    if (expectItResult && typeof expectItResult.then === 'function') {
-        expectItResult.then(() => {}, () => {});
-        throw new RequiresAsyncError();
-    }
 }
 
 

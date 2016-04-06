@@ -153,45 +153,11 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
 
 function diffAttributes(actualAttributes, expectedAttributes, expect, options) {
 
-    const promises = [];
-
-    // Special handler for expect.it()'s, that may be async
-    // Adds to the promises collection, which we wait for at the end
-    const expectItHandler = function (assertion, actualValue, attribResult, weights, options) {
-
-        const withErrorResult = expect.withError(() => assertion(actualValue), e => {
-
-            attribResult.diff = {
-                type: 'custom',
-                assertion: assertion,
-                error: e
-            };
-
-            weights.add(options.weights.ATTRIBUTE_MISMATCH);
-        });
-        promises.push(withErrorResult);
-    };
-
-    const result = DiffCommon.diffAttributes(actualAttributes, expectedAttributes, expect, expectItHandler, options);
-
-    if (promises.length) {
-        return expect.promise.all(promises)
-            .then(() => {
-                return {
-                    diff: result.diff,
-                    weight: result.weight
-                };
-            });
-    } else {
-        return expect.promise((resolve, reject) => {
-            return resolve({
-                diff: result.diff,
-                weight: result.weight
-            });
-        });
+    const result = DiffCommon.diffAttributes(actualAttributes, expectedAttributes, expect, options);
+    if (typeof result.then === 'function') {
+        return result;
     }
-
-
+    return expect.promise.resolve(result);
 }
 
 
