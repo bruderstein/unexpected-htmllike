@@ -209,6 +209,30 @@ describe('Painter', () => {
 
     });
 
+    it('outputs a function with a custom toString() directly', () => {
+
+        const testFunc = function testFunc() {
+            console.log('hello world');
+        };
+
+        testFunc.toString = function () {
+            return 'spy';
+        };
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'MyComponent',
+            attributes: [
+                { name: 'onClick', value: testFunc }
+            ]
+        }, expect.diff, expect.inspect);
+
+        expect(pen.toString(), 'to equal',
+            '<MyComponent onClick={function spy} />');
+
+
+    });
+
     it('outputs a changed attribute', () => {
 
         Painter(pen, {

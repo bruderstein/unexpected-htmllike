@@ -395,17 +395,27 @@ function outputFunctionAttribute(pen, value, inspect) {
         return;
     }
     
-    var source = value.toString();
-    var matchSource = source.match(/^\s*function (\w*?)\s*\(([^\)]*)\)\s*\{([\s\S]*?( *)?)\}\s*$/);
-    var name = (typeof value.name === 'string' && value.name) || matchSource[1];
-    var args = matchSource[2];
-    var body = matchSource[3];
-    if (body.indexOf('\n') !== -1 || body.length > 30) {
-        pen.prismKeyword('function ')
-            .prismVariable(name)
-            .prismPunctuation('(')
-            .prismVariable(args)
-            .prismPunctuation(') { /* ... */ }');
+    if (value && typeof value.toString === 'function') {
+        var source = value.toString();
+        var matchSource = source.match(/^\s*function (\w*?)\s*\(([^\)]*)\)\s*\{([\s\S]*?( *)?)\}\s*$/);
+        if (matchSource) {
+            var name = (typeof value.name === 'string' && value.name) || matchSource[1];
+            var args = matchSource[2];
+            var body = matchSource[3];
+            if (body.indexOf('\n') !== -1 || body.length > 30) {
+                pen.prismKeyword('function ')
+                    .prismVariable(name)
+                    .prismPunctuation('(')
+                    .prismVariable(args)
+                    .prismPunctuation(') { /* ... */ }');
+            } else {
+                pen.append(inspect(value));
+            }
+        } else {
+            if (source && source.length < 30) {
+                pen.append('function ').append(source);
+            } 
+        }
     } else {
         pen.append(inspect(value));
     }
