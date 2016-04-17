@@ -50,3 +50,8 @@ i.e. Caller need to check if they are a promise (existence of `result.then` is f
 * Attributes now diffed with 'to satisfy'
 
 
+### v2.0.1
+* Fix spy functions (and other functions with a custom .toString() method)
+
+### v2.0.2
+* Fix outputting inspected attributes (e.g objects). Could previously result in incorrect indenting.
