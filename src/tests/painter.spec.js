@@ -23,6 +23,9 @@ function duplicate(object, count) {
 expect.addAssertion('<object> to output <string>', function (expect, subject, result) {
 
     const pen = expect.output.clone();
+    pen.addStyle('appendInspected', function (arg) {
+        this.append(expect.inspect(arg));
+    }, true);
     Painter(pen, subject, expect.diff.bind(expect), expect.inspect.bind(expect));
     expect(pen.toString(), 'to equal', result);
 });
@@ -33,6 +36,9 @@ describe('Painter', () => {
 
     beforeEach(() => {
         pen = expect.output.clone();
+        pen.addStyle('appendInspected', function (arg) {
+            this.append(expect.inspect(arg));
+        }, true);
     });
 
     it('outputs a single empty element', () => {
@@ -315,6 +321,33 @@ describe('Painter', () => {
             '                                   //              // -ghi\n' +
             '                                   //              // +ghij\n' +
             '                                   // }\n' +
+            '/>');
+    });
+
+    it('outputs a changed attribute with an object assertion failure', () => {
+
+        var error;
+        try {
+            expect({ abc: 123, def: 'ghi' }, 'to satisfy', { abc: 245 });
+        } catch (e) {
+            error = e;
+        }
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'div',
+            attributes: [
+                { name: 'id', value: { abc: 123, def: 'ghi' }, diff: { type: 'changed', error: error, expectedValue: { abc: 123, def: 'ghij' } } }
+            ]
+        }, expect.diff, expect.inspect);
+
+        expect(pen.toString(), 'to equal',
+            "<div\n" +
+            "   id={{ abc: 123, def: 'ghi' }} // expected { abc: 123, def: 'ghi' } to satisfy { abc: 245 }\n" +
+            '                                 //\n' +
+            '                                 // {\n' +
+            '                                 //   abc: 123, // should equal 245\n' +
+            "                                 //   def: 'ghi'\n" +
+            '                                 // }\n' +
             '/>');
     });
 

@@ -124,6 +124,9 @@ module.exports = {
         expect.addAssertion('<HtmlDiffResult> to output <string>', (expect, subject, value) => {
             const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
             const pen = expect.output.clone();
+            pen.addStyle('appendInspected', function (arg) {
+                this.append(expect.inspect(arg));
+            }, true);
             htmlLikeUnexpected.render(subject, pen, expect.diff.bind(expect), expect.inspect.bind(expect));
             expect(pen.toString(), 'to equal', value);
         });
@@ -132,6 +135,9 @@ module.exports = {
 
             const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
             const pen = expect.output.clone();
+            pen.addStyle('appendInspected', function (arg) {
+                this.append(expect.inspect(arg));
+            }, true);
             htmlLikeUnexpected.render(subject, pen, expect.diff.bind(expect), expect.inspect.bind(expect));
             expect.withError(() => expect(pen.toString(), 'to equal', value), e => {
                 return expect.fail({
@@ -174,6 +180,9 @@ module.exports = {
 
             const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
             const pen = expect.output.clone();
+            pen.addStyle('appendInspected', function (arg) {
+                this.append(expect.inspect(arg));
+            }, true);
             htmlLikeUnexpected.render(subject.bestMatch, pen, expect.diff.bind(expect), expect.inspect.bind(expect));
             expect.errorMode = 'bubble';
             expect(subject.bestMatch, 'not to be null');

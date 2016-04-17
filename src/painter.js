@@ -162,9 +162,6 @@ export default function painter(pen, description, diffFn, inspect) {
                     case 'custom':
 
                         pen.text(description.value).sp().annotationBlock(function () {
-                            pen.addStyle('appendInspected', function (arg) {
-                                this.append(inspect(arg));
-                            }, true);
                             this.append(description.diff.error.getErrorMessage(pen));
                         });
                         if (pen.forceLineBreak) {
@@ -289,9 +286,6 @@ function outputAttribute(pen, name, value, diff, inspect, diffFn) {
                 outputRawAttribute(pen, name, value, inspect);
                 pen.sp().annotationBlock(pen => {
                     if (diff.error) {
-                        pen.addStyle('appendInspected', function (arg) {
-                            this.append(inspect(arg));
-                        }, true);
                         pen.append(diff.error.getErrorMessage(pen));
                     } else {
                         pen.error('should be ');
@@ -382,7 +376,7 @@ function outputRawAttribute(pen, name, value, inspect) {
             break;
         default:
             pen.prismPunctuation('{')
-                .prismAttrValue(inspect(value))
+                .append(inspect(value))
                 .prismPunctuation('}');
             break;
     }
