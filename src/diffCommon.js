@@ -248,34 +248,45 @@ export const diffAttributes = function (actualAttributes, expectedAttributes, ex
         }
     });
 
+    let isTarget = false;
     Object.keys(expectedAttributes).forEach(attrib => {
 
         if (!actualAttributes.hasOwnProperty(attrib)) {
-            if (options.diffRemovedAttributes) {
-                diffWeights.addReal(options.weights.ATTRIBUTE_MISSING);
-                const attribResult = {
-                    name: attrib,
-                    diff: {
-                        type: 'missing',
-                        expectedValue: expectedAttributes[attrib]
-                    }
-                };
-                diffResult.push(attribResult);
+            if (attrib === options.findTargetAttrib) {
+                // If it's the findTargetAttrib attribute, but it's not true, we still want to ignore the attribute
+                // This will allow dynamic testing:   e.g. <SomeChild eventTarget={index === 3 ? true : false} />
+                if (expectedAttributes[attrib] === true) {
+                    isTarget = true;
+                }
+            } else {
+                if (options.diffRemovedAttributes) {
+                    diffWeights.addReal(options.weights.ATTRIBUTE_MISSING);
+                    const attribResult = {
+                        name: attrib,
+                        diff: {
+                            type: 'missing',
+                            expectedValue: expectedAttributes[attrib]
+                        }
+                    };
+                    diffResult.push(attribResult);
+                } 
+                diffWeights.addTotal(options.weights.ATTRIBUTE_MISSING);
             }
-            diffWeights.addTotal(options.weights.ATTRIBUTE_MISSING);
         }
     });
 
     if (promises.length) {
         return expect.promise.all(promises).then(() => ({
             diff: diffResult,
-            weight: diffWeights
+            weight: diffWeights,
+            isTarget: isTarget
         }));
     }
     
     return {
         diff: diffResult,
-        weight: diffWeights
+        weight: diffWeights,
+        isTarget: isTarget
     };
 };
 
