@@ -338,4 +338,41 @@ describe('contains', () => {
             }
         });
     });
+    
+    describe('findTargetAttrib', () => {
+       
+        it('finds a target in a simple element', () => {
+            
+            const target = createActual({
+                            name: 'span',
+                            attribs: { id: '123' },
+                            children: []
+                        });
+            return expect(createActual({
+                name: 'div', attribs: {}, children: [
+                    {
+                        name: 'span',
+                        attribs: { id: 'main' },
+                        children: [ target ]
+                    }
+                ]
+            }), 'when checked with options to contain', { findTargetAttrib: 'eventTarget', diffExtraAttributes: false }, createExpected(
+                    {
+                        name: 'span',
+                        attribs: {},
+                        children: [ { name: 'span', attribs: { eventTarget: true }, children: [] } ]
+                    }
+            ), 'to satisfy', {
+                found: true,
+                bestMatch: {
+                    diff: {
+                        type: 'ELEMENT'
+                    },
+                    weight: 0,
+                    target
+                }
+            });
+            
+        })
+    });
 });
