@@ -1839,4 +1839,523 @@ describe('diff', () => {
         });
     });
 
+    describe('with findTargetAttrib', () => {
+
+        describe('(sync)', () => {
+
+            it('returns the top level element', () => {
+
+                const unique = { id: 'test' };
+                const targetElement = createActual({
+                    name: 'SomeElement',
+                    attribs: { id: 'foo' },
+                    children: []
+                });
+
+                return expect(targetElement, 'when diffed with options against',
+                    { diffExtraAttributes: false, findTargetAttrib: 'eventTarget' },
+                    createExpected({
+                        name: 'SomeElement',
+                        attribs: { eventTarget: true },
+                        children: []
+                    }), 'to satisfy', {
+                        diff: {
+                            type: 'ELEMENT'
+                        },
+                        target: targetElement,
+                        weight: Diff.DefaultWeights.OK
+                    });
+
+            });
+
+            it('returns a simple nested element', () => {
+
+                const targetElement = createActual({
+                    name: 'AnotherElement',
+                    attribs: { },
+                    children: []
+                });
+
+                return expect(createActual({
+                    name:'SomeElement',
+                    attribs: {},
+                    children: [ targetElement ]
+                }), 'when diffed with options against', { findTargetAttrib: 'eventTarget' }, createExpected({
+                    name: 'SomeElement',
+                    attribs: {},
+                    children: [{
+                        name: 'AnotherElement',
+                        attribs: { eventTarget: true },
+                        children: []
+                    }]
+                }), 'to satisfy', {
+                    diff: {
+                        type: 'ELEMENT'
+                    },
+                    target: targetElement,
+                    weight: Diff.DefaultWeights.OK
+                });
+
+            });
+
+            it('ignores the target if eventTarget is not true', () => {
+
+                const targetElement = createActual({
+                    name: 'AnotherElement',
+                    attribs: { },
+                    children: []
+                });
+
+                return expect(createActual({
+                    name:'SomeElement',
+                    attribs: {},
+                    children: [ targetElement ]
+                }), 'when diffed with options against', { findTargetAttrib: 'eventTarget' }, createExpected({
+                    name: 'SomeElement',
+                    attribs: {},
+                    children: [{
+                        name: 'AnotherElement',
+                        attribs: { eventTarget: false },
+                        children: []
+                    }]
+                }), 'to satisfy', {
+                    diff: {
+                        type: 'ELEMENT'
+                    },
+                    target: undefined,
+                    weight: Diff.DefaultWeights.OK
+                });
+
+            });
+
+            it('returns a target embedded in an array of children', () => {
+
+                const targetElement = createActual({
+                    name: 'ChildElement',
+                    attribs: { id: 'abc' },
+                    children: ['two']
+                });
+
+                return expect(createActual({
+                    name:'SomeElement',
+                    attribs: {},
+                    children: [
+                        { name: 'ChildElement', attribs: {}, children: ['one'] },
+                        targetElement,
+                        { name: 'ChildElement', attribs: {}, children: ['three'] }
+                    ]
+                }), 'when diffed with options against', { diffExtraAttributes: false, findTargetAttrib: 'eventTarget' }, createExpected({
+                    name: 'SomeElement',
+                    attribs: {},
+                    children: [{
+                        name: 'ChildElement',
+                        attribs: {},
+                        children: ['one']
+                    }, {
+                        name: 'ChildElement',
+                        attribs: { eventTarget: true },
+                        children: ['two']
+                    }, {
+                        name: 'ChildElement',
+                        attribs: {},
+                        children: ['three']
+                    }]
+                }), 'to satisfy', {
+                    diff: {
+                        type: 'ELEMENT'
+                    },
+                    target: targetElement,
+                    weight: Diff.DefaultWeights.OK
+                });
+
+            });
+
+            it('returns a target embedded in an array of children, when extra children are present', () => {
+
+                const targetElement = createActual({
+                    name: 'ChildElement',
+                    attribs: { id: 'abc' },
+                    children: ['two']
+                });
+
+                return expect(createActual({
+                    name:'SomeElement',
+                    attribs: {},
+                    children: [
+                        { name: 'ChildElement', attribs: {}, children: ['zero'] },
+                        { name: 'ChildElement', attribs: {}, children: ['one'] },
+                        targetElement,
+                        { name: 'ChildElement', attribs: {}, children: ['three'] }
+                    ]
+                }), 'when diffed with options against', { diffExtraChildren: false, diffExtraAttributes: false, findTargetAttrib: 'eventTarget' }, createExpected({
+                    name: 'SomeElement',
+                    attribs: {},
+                    children: [{
+                        name: 'ChildElement',
+                        attribs: {},
+                        children: ['one']
+                    }, {
+                        name: 'ChildElement',
+                        attribs: { eventTarget: true },
+                        children: ['two']
+                    }, {
+                        name: 'ChildElement',
+                        attribs: {},
+                        children: ['three']
+                    }]
+                }), 'to satisfy', {
+                    diff: {
+                        type: 'ELEMENT'
+                    },
+                    target: targetElement,
+                    weight: Diff.DefaultWeights.OK
+                });
+
+            });
+
+            it('returns a target embedded in a nested array of children', () => {
+
+                const targetElement = createActual({
+                    name: 'GrandChild',
+                    attribs: { id: 'grandchild2-2' },
+                    children: []
+                });
+
+                return expect(createActual({
+                    name:'SomeElement',
+                    attribs: { id: 'foo' },
+                    children: [
+                        { name: 'ChildElement', attribs: { id: 'child1' }, children: [
+                            { name: 'GrandChild', attribs: { id: 'grandchild1-1'}, children: [] },
+                            { name: 'GrandChild', attribs: { id: 'grandchild1-2'}, children: [] }
+                        ]},
+                        { name: 'ChildElement', attribs: { id: 'child2' }, children: [
+                            { name: 'GrandChild', attribs: { id: 'grandchild2-1'}, children: [] },
+                            targetElement,
+                        ]},
+
+                        { name: 'ChildElement', attribs: { id: 'child3' }, children: [
+                            { name: 'GrandChild', attribs: { id: 'grandchild3-1'}, children: [] },
+                            { name: 'GrandChild', attribs: { id: 'grandchild3-2'}, children: [] }
+                        ] }
+                    ]
+                }), 'when diffed with options against', { diffExtraAttributes: false, findTargetAttrib: 'eventTarget' }, createExpected(
+                    { name: 'SomeElement', attribs: {}, children: [
+                        { name: 'ChildElement', attribs: {  }, children: [
+                            { name: 'GrandChild', attribs: { }, children: [] },
+                            { name: 'GrandChild', attribs: { }, children: [] }
+                        ]},
+                        { name: 'ChildElement', attribs: { }, children: [
+                            { name: 'GrandChild', attribs: { }, children: [] },
+                            { name: 'GrandChild', attribs: { eventTarget: true }, children: [] }
+                        ]},
+
+                        { name: 'ChildElement', attribs: { }, children: [
+                            { name: 'GrandChild', attribs: {}, children: [] },
+                            { name: 'GrandChild', attribs: {}, children: [] }
+                        ] }
+                    ]}), 'to satisfy', {
+                    diff: {
+                        type: 'ELEMENT'
+                    },
+                    target: targetElement,
+                    weight: Diff.DefaultWeights.OK
+                });
+
+            });
+            
+            it('finds the target when a wrapper is present', () => {
+                
+                const targetElement = createActual({
+                    name: 'AnotherElement',
+                    attribs: { },
+                    children: []
+                });
+
+                return expect(createActual(
+                    { name: 'WrapperElement', attribs: {}, children: [
+                        {
+                            name:'SomeElement',
+                            attribs: {},
+                            children: [ targetElement ]
+                        }
+                    ]
+                    }
+                ), 'when diffed with options against', { findTargetAttrib: 'eventTarget', diffWrappers: false }, createExpected({
+                    name: 'SomeElement',
+                    attribs: {},
+                    children: [{
+                        name: 'AnotherElement',
+                        attribs: { eventTarget: true },
+                        children: []
+                    }]
+                }), 'to satisfy', {
+                    diff: {
+                        type: 'WRAPPERELEMENT'
+                    },
+                    weight: Diff.DefaultWeights.OK,
+                    target: targetElement
+                });
+                
+            });
+        });
+
+        describe('(async)', () => {
+
+            it('returns the top level element', () => {
+
+                const targetElement = createActual({
+                    name: 'SomeElement',
+                    attribs: { id: 'foo' },
+                    children: []
+                });
+
+                return expect(targetElement, 'when diffed with options against',
+                    { diffExtraAttributes: false, findTargetAttrib: 'eventTarget' },
+                    createExpected({
+                        name: 'SomeElement',
+                        attribs: { id: expect.it('to eventually have value', 'foo'), eventTarget: true },
+                        children: []
+                    }), 'to satisfy', {
+                        diff: {
+                            type: 'ELEMENT'
+                        },
+                        target: targetElement,
+                        weight: Diff.DefaultWeights.OK
+                    });
+
+            });
+
+            it('returns a simple nested element', () => {
+
+                const unique = { id: 'test' };
+                const targetElement = createActual({
+                    name: 'AnotherElement',
+                    attribs: { },
+                    children: []
+                });
+
+                return expect(createActual({
+                    name:'SomeElement',
+                    attribs: { id: 'foo' },
+                    children: [ targetElement ]
+                }), 'when diffed with options against', { findTargetAttrib: 'eventTarget' }, createExpected({
+                    name: 'SomeElement',
+                    attribs: { id: expect.it('to eventually have value', 'foo') },
+                    children: [{
+                        name: 'AnotherElement',
+                        attribs: { eventTarget: true },
+                        children: []
+                    }]
+                }), 'to satisfy', {
+                    diff: {
+                        type: 'ELEMENT'
+                    },
+                    target: targetElement,
+                    weight: Diff.DefaultWeights.OK
+                });
+
+            });
+
+            it('ignores the target if eventTarget is not true', () => {
+
+                const targetElement = createActual({
+                    name: 'AnotherElement',
+                    attribs: { },
+                    children: []
+                });
+
+                return expect(createActual({
+                    name:'SomeElement',
+                    attribs: { id: 'foo' },
+                    children: [ targetElement ]
+                }), 'when diffed with options against', { findTargetAttrib: 'eventTarget' }, createExpected({
+                    name: 'SomeElement',
+                    attribs: { id: expect.it('to eventually have value', 'foo') },
+                    children: [{
+                        name: 'AnotherElement',
+                        attribs: { eventTarget: false },
+                        children: []
+                    }]
+                }), 'to satisfy', {
+                    diff: {
+                        type: 'ELEMENT'
+                    },
+                    target: undefined,
+                    weight: Diff.DefaultWeights.OK
+                });
+
+            });
+
+            it('returns a target embedded in an array of children', () => {
+
+                const targetElement = createActual({
+                    name: 'ChildElement',
+                    attribs: { id: 'abc' },
+                    children: ['two']
+                });
+
+                return expect(createActual({
+                    name:'SomeElement',
+                    attribs: { id: 'foo' },
+                    children: [
+                        { name: 'ChildElement', attribs: {}, children: ['one'] },
+                        targetElement,
+                        { name: 'ChildElement', attribs: {}, children: ['three'] }
+                    ]
+                }), 'when diffed with options against', { diffExtraAttributes: false, findTargetAttrib: 'eventTarget' }, createExpected({
+                    name: 'SomeElement',
+                    attribs: { id: expect.it('to eventually have value', 'foo') },
+                    children: [{
+                        name: 'ChildElement',
+                        attribs: {},
+                        children: ['one']
+                    }, {
+                        name: 'ChildElement',
+                        attribs: { eventTarget: true },
+                        children: ['two']
+                    }, {
+                        name: 'ChildElement',
+                        attribs: {},
+                        children: ['three']
+                    }]
+                }), 'to satisfy', {
+                    diff: {
+                        type: 'ELEMENT'
+                    },
+                    target: targetElement,
+                    weight: Diff.DefaultWeights.OK
+                });
+
+            });
+
+            it('returns a target embedded in an array of children, when extra children are present', () => {
+
+                const targetElement = createActual({
+                    name: 'ChildElement',
+                    attribs: { id: 'abc' },
+                    children: ['two']
+                });
+
+                return expect(createActual({
+                    name:'SomeElement',
+                    attribs: { id: 'foo' },
+                    children: [
+                        { name: 'ChildElement', attribs: {}, children: ['zero'] },
+                        { name: 'ChildElement', attribs: {}, children: ['one'] },
+                        targetElement,
+                        { name: 'ChildElement', attribs: {}, children: ['three'] }
+                    ]
+                }), 'when diffed with options against', { diffExtraChildren: false, diffExtraAttributes: false, findTargetAttrib: 'eventTarget' }, createExpected({
+                    name: 'SomeElement',
+                    attribs: { id: expect.it('to eventually have value', 'foo')},
+                    children: [{
+                        name: 'ChildElement',
+                        attribs: {},
+                        children: ['one']
+                    }, {
+                        name: 'ChildElement',
+                        attribs: { eventTarget: true },
+                        children: ['two']
+                    }, {
+                        name: 'ChildElement',
+                        attribs: {},
+                        children: ['three']
+                    }]
+                }), 'to satisfy', {
+                    diff: {
+                        type: 'ELEMENT'
+                    },
+                    target: targetElement,
+                    weight: Diff.DefaultWeights.OK
+                });
+
+            });
+
+            it('returns a target embedded in a nested array of children', () => {
+
+                const targetElement = createActual({
+                    name: 'GrandChild',
+                    attribs: { id: 'grandchild2-2' },
+                    children: []
+                });
+
+                return expect(createActual({
+                    name:'SomeElement',
+                    attribs: { id: 'foo' },
+                    children: [
+                        { name: 'ChildElement', attribs: { id: 'child1' }, children: [
+                            { name: 'GrandChild', attribs: { id: 'grandchild1-1'}, children: [] },
+                            { name: 'GrandChild', attribs: { id: 'grandchild1-2'}, children: [] }
+                        ]},
+                        { name: 'ChildElement', attribs: { id: 'child2' }, children: [
+                            { name: 'GrandChild', attribs: { id: 'grandchild2-1'}, children: [] },
+                            targetElement,
+                        ]},
+
+                        { name: 'ChildElement', attribs: { id: 'child3' }, children: [
+                            { name: 'GrandChild', attribs: { id: 'grandchild3-1'}, children: [] },
+                            { name: 'GrandChild', attribs: { id: 'grandchild3-2'}, children: [] }
+                        ] }
+                    ]
+                }), 'when diffed with options against', { diffExtraAttributes: false, findTargetAttrib: 'eventTarget' }, createExpected(
+                    { name: 'SomeElement', attribs: { id: expect.it('to eventually have value', 'foo')}, children: [
+                        { name: 'ChildElement', attribs: {}, children: [
+                            { name: 'GrandChild', attribs: {}, children: [] },
+                            { name: 'GrandChild', attribs: {}, children: [] }
+                        ]},
+                        { name: 'ChildElement', attribs: {}, children: [
+                            { name: 'GrandChild', attribs: {}, children: [] },
+                            { name: 'GrandChild', attribs: { eventTarget: true }, children: [] }
+                        ]},
+
+                        { name: 'ChildElement', attribs: {}, children: [
+                            { name: 'GrandChild', attribs: {}, children: [] },
+                            { name: 'GrandChild', attribs: {}, children: [] }
+                        ] }
+                    ]}), 'to satisfy', {
+                    diff: {
+                        type: 'ELEMENT'
+                    },
+                    target: targetElement,
+                    weight: Diff.DefaultWeights.OK
+                });
+            });
+
+            it('finds the target when a wrapper is present', () => {
+
+                const targetElement = createActual({
+                    name: 'AnotherElement',
+                    attribs: { },
+                    children: []
+                });
+
+                return expect(createActual(
+                    { name: 'WrapperElement', attribs: {}, children: [
+                        {
+                            name:'SomeElement',
+                            attribs: { id: 'foo'},
+                            children: [ targetElement ]
+                        }
+                    ]
+                    }
+                ), 'when diffed with options against', { findTargetAttrib: 'eventTarget', diffWrappers: false }, createExpected({
+                    name: 'SomeElement',
+                    attribs: { id: expect.it('to eventually have value', 'foo') },
+                    children: [{
+                        name: 'AnotherElement',
+                        attribs: { eventTarget: true },
+                        children: []
+                    }]
+                }), 'to satisfy', {
+                    diff: {
+                        type: 'WRAPPERELEMENT'
+                    },
+                    weight: Diff.DefaultWeights.OK,
+                    target: targetElement
+                });
+
+            });
+        });
+    });
 });

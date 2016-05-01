@@ -2,7 +2,6 @@ import ArrayChanges from 'array-changes';
 import ObjectAssign from 'object-assign';
 import isNativeType from './isNativeType';
 import convertToDiff from './convertToDiff';
-import LineBreaker from './lineBreaker';
 import Weights from './Weights';
 import * as DiffCommon from './diffCommon';
 import RequiresAsyncError from './requiresAsyncError';
@@ -19,7 +18,8 @@ function diffElements(actualAdapter, expectedAdapter, actual, expected, expect, 
     var diffResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, options);
     return {
         diff: diffResult.diff,
-        weight: diffResult.weight.real
+        weight: diffResult.weight.real,
+        target: diffResult.target
     };
 }
 
@@ -120,7 +120,12 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
         // Promise returned, we need to do this async
         throw new RequiresAsyncError();
     }
-    
+
+    let target;
+
+    if (attributesResult.isTarget) {
+        target = actual;
+    }
     diffResult.attributes = attributesResult.diff;
     weights.addWeight(attributesResult.weight);
 
@@ -128,10 +133,12 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
 
     diffResult.children = contentResult.diff;
     weights.addWeight(contentResult.weight);
+    target = target || contentResult.target;
 
     return {
         diff: diffResult,
-        weight: weights
+        weight: weights,
+        target: target
     };
 
 }
@@ -141,6 +148,7 @@ function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, o
 
     let bestWeight = null;
     let bestDiff = null;
+    let bestTarget;
 
     // Optimize the common case of being exactly one child, ie. an element wrapping something
     // Removed for now, to make this function slightly easier to convert to promises!
@@ -158,6 +166,7 @@ function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, o
     if (!bestWeight || childrenResult.weight.real < bestWeight.real) {
         bestDiff = childrenResult.diff;
         bestWeight = childrenResult.weight;
+        bestTarget = childrenResult.target;
     }
 
 
@@ -194,7 +203,8 @@ function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, o
     }
     return {
         diff: bestDiff,
-        weight: bestWeight
+        weight: bestWeight,
+        target: bestTarget
     };
 }
 
@@ -242,6 +252,7 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
     const cachedDiffs = [];
     cachedDiffs.length = actualChildrenLength * expectedChildrenLength;
 
+
     const changes = ArrayChanges(actualChildren, expectedChildren,
         function (a, b, aIndex, bIndex) {
             const cacheIndex = (aIndex * expectedChildrenLength) + bIndex;
@@ -284,9 +295,17 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
         });
 
 
+    let target = undefined;
     changes.forEach(diffItem => {
 
-        let itemResult;
+        let itemResult, cachedDiff;
+        if (typeof diffItem.actualIndex === 'number' && typeof diffItem.expectedIndex === 'number') {
+            const cacheIndex = (diffItem.actualIndex * expectedChildrenLength) + diffItem.expectedIndex;
+            cachedDiff = cachedDiffs[cacheIndex];
+            if (cachedDiff && cachedDiff.target) {
+                target = cachedDiff.target;
+            }
+        }
 
         switch (diffItem.type) {
             case 'insert':
@@ -327,17 +346,13 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
             case 'similar':
                 changeCount++;
             // fallthrough
-            // (equal needs to be diffed, because it may contain wrappers, hence we need to work that out.. again)
-            // It would be good to cache that, from the diff above.
 
             case 'equal': //eslint-disable-line no-fallthrough
             default:
-                const result = diffElementOrWrapper(actualAdapter, expectedAdapter, diffItem.value, diffItem.expected, expect, options);
-                diffResult.push(result.diff);
-                diffWeights.addWeight(result.weight);
+                diffResult.push(cachedDiff.diff);
+                diffWeights.addWeight(cachedDiff.weight);
                 break;
         }
-
     });
 
 
@@ -348,6 +363,7 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
     return {
         weight: diffWeights,
         diff: diffResult,
+        target,
         insertCount,
         removeCount,
         changeCount

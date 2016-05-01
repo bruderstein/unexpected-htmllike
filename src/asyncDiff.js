@@ -19,7 +19,8 @@ function diffElements(actualAdapter, expectedAdapter, actual, expected, expect, 
         .then(diffResult => {
             return {
                 diff: diffResult.diff,
-                weight: diffResult.weight.real
+                weight: diffResult.weight.real,
+                target: diffResult.target
             };
         });
 }
@@ -121,10 +122,14 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
 
     diffResult = DiffCommon.getElementResult(actualName, expectedName, weights, options);
 
+    let target;
     const attributesResultPromise = diffAttributes(actualAdapter.getAttributes(actual), expectedAdapter.getAttributes(expected), expect, options)
         .then(attribResult => {
             diffResult.attributes = attribResult.diff;
             weights.addWeight(attribResult.weight);
+            if (attribResult.isTarget) {
+                target = actual;
+            }
         });
 
     promises.push(attributesResultPromise);
@@ -135,6 +140,9 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
 
             diffResult.children = contentResult.diff;
             weights.addWeight(contentResult.weight);
+            if (contentResult.target) {
+                target = contentResult.target;
+            }
         });
 
     promises.push(contentResultPromise);
@@ -144,7 +152,8 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
 
         return {
             diff: diffResult,
-            weight: weights
+            weight: weights,
+            target
         };
     });
 
@@ -167,6 +176,7 @@ function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, o
 
     let bestWeight = null;
     let bestDiff = null;
+    let bestTarget;
 
     // Optimize the common case of being exactly one child, ie. an element wrapping something
     // Removed for now, to make this function slightly easier to convert to promises!
@@ -184,6 +194,7 @@ function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, o
         if (!bestWeight || childrenResult.weight.real < bestWeight.real) {
             bestDiff = childrenResult.diff;
             bestWeight = childrenResult.weight;
+            bestTarget = childrenResult.target;
         }
     }).then(() => {
 
@@ -225,7 +236,8 @@ function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, o
     }).then(() => {
         return {
             diff: bestDiff,
-            weight: bestWeight
+            weight: bestWeight,
+            target: bestTarget
         };
     });
 
@@ -327,9 +339,18 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
                 return callback(actualAdapter.getName(a) === expectedAdapter.getName(b));
             }, function (changes) {
 
+                let target;
                 changes.forEach(diffItem => {
 
                     let itemResult;
+                    let testCached;
+                    if (typeof diffItem.actualIndex === 'number' && (typeof diffItem.expectedIndex === 'number' || diffItem.type === 'equal')) {
+                        const cacheIndex = (diffItem.actualIndex * expectedChildrenLength) + diffItem.expectedIndex;
+                        const cachedDiff = cachedDiffs[cacheIndex];
+                        if (cachedDiff && cachedDiff.target) {
+                            target = cachedDiff.target;
+                        }
+                    }
 
                     switch(diffItem.type) {
                         case 'insert':
@@ -392,13 +413,13 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
 
                 if (promises.length) {
                     return expect.promise.all(promises).then(() => {
-                        resolve();
+                        resolve(target);
                     });
                 }
-                return resolve();
+                return resolve(target);
             });
 
-    }).then(() => {
+    }).then(target => {
 
         if (actualChildren.length === 0 && expectedChildren.length !== 0 && options.diffMissingChildren) {
             diffWeights.add(options.weights.ALL_CHILDREN_MISSING);
@@ -409,7 +430,8 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
             diff: diffResult,
             insertCount,
             removeCount,
-            changeCount
+            changeCount,
+            target
         };
     });
 }

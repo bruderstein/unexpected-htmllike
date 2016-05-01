@@ -174,6 +174,62 @@ Note that the class attribute for the actual and expected adapters must be the s
 This means that they will not have any effect if comparing (for example) the DOM (using `class` attribute) with React 
 JSX (using `className` attribute). This may change in a future release.
 
+### findTargetAttrib (string)
+This allows finding an actual child identified by an attribute on the expected. 
+
+For instance, when `findTargetAttrib` is set to `'eventTarget'`, and presented with the following "actual" value (in some XML/HTML representation with an appropriate adapter)
+
+```xml
+<SomeComponent>
+   <div className="wrapper">
+      <ChildComponent id="1">foo</ChildComponent>
+      <ChildComponent id="2">bar</ChildComponent>
+      <ChildComponent id="3">baz</ChildComponent>
+   </div>
+</SomeComponent>   
+```
+
+The expected value is then (expressed in JSX syntax, the value of the attribute must be  ` === true`):
+
+```xml
+<SomeComponent>
+   <div className="wrapper">
+      <ChildComponent id="2" eventTarget={true} />
+   </div>
+</SomeComponent>
+```
+
+In this case, (assuming `diffExtraElements` is false in the options) the resulting diff will contain a `target` property, which is the `<ChildComponent id="2">bar</ChildComponent>` element from the actual value (in whatever form that object takes).
+
+
+When set, the result of the diff contains a `target` property, which is the matching "actual" element that matched the "expected" element with the given attribute as true.
+
+It is anticipated to use this to identify a child component on which to trigger an event, or a child component to identify.
+
+e.g. (using unexpected-react as an example)
+
+```js
+// With `eventTarget` set as `findTargetAttrib`
+expect(todoList, 'with event click', 'on', <TodoItem id={2}><button className="completed" eventTarget /></TodoItem>,
+       'to contain', <TodoItem id={2}><span>Completed!</span></TodoItem>);
+       
+// With `queryTarget` set as `findTargetAttrib`
+expect(todoList, 'queried for', <TodoItem id={2}><span className="label" queryTarget /></TodoItem>,
+       'to have rendered', <span>Label of item 2</span>);
+```
+
+* For `diff()`, the target is a direct property of the result. 
+* For `contains()`, the target is under the `bestMatch` property. i.e. 
+```js
+var containsResult = htmlLikeInstance.contains(adapter, actual, expected, expect, options);
+
+if (containsResult.found) {
+    const foundTarget = containsResult.bestMatch.target;
+    // ...
+}
+```
+
+
 ### weights  (object)
 This must be an object that represents the different weights for the various differences that can occur.
 The weights that can be provided, and the defaults are shown here
