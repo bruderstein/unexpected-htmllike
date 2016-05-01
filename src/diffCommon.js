@@ -56,7 +56,8 @@ export const checkElementWrapperResult = function (actualAdapter, actual, curren
         // It is (better as) a wrapper.
         diffResult = {
             diff: convertToDiff(actualAdapter, actual, { includeChildren: false }),
-            weight: wrapperResult.weight.addTotal(options.weights.WRAPPER_REMOVED)
+            weight: wrapperResult.weight.addTotal(options.weights.WRAPPER_REMOVED),
+            target: wrapperResult.target
         };
         if (options.diffWrappers) {
             diffResult.diff.diff = {

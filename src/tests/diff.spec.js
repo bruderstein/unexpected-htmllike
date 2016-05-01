@@ -1870,7 +1870,6 @@ describe('diff', () => {
 
             it('returns a simple nested element', () => {
 
-                const unique = { id: 'test' };
                 const targetElement = createActual({
                     name: 'AnotherElement',
                     attribs: { },
@@ -2063,6 +2062,41 @@ describe('diff', () => {
                     weight: Diff.DefaultWeights.OK
                 });
 
+            });
+            
+            it('finds the target when a wrapper is present', () => {
+                
+                const targetElement = createActual({
+                    name: 'AnotherElement',
+                    attribs: { },
+                    children: []
+                });
+
+                return expect(createActual(
+                    { name: 'WrapperElement', attribs: {}, children: [
+                        {
+                            name:'SomeElement',
+                            attribs: {},
+                            children: [ targetElement ]
+                        }
+                    ]
+                    }
+                ), 'when diffed with options against', { findTargetAttrib: 'eventTarget', diffWrappers: false }, createExpected({
+                    name: 'SomeElement',
+                    attribs: {},
+                    children: [{
+                        name: 'AnotherElement',
+                        attribs: { eventTarget: true },
+                        children: []
+                    }]
+                }), 'to satisfy', {
+                    diff: {
+                        type: 'WRAPPERELEMENT'
+                    },
+                    weight: Diff.DefaultWeights.OK,
+                    target: targetElement
+                });
+                
             });
         });
 
@@ -2286,6 +2320,41 @@ describe('diff', () => {
                     target: targetElement,
                     weight: Diff.DefaultWeights.OK
                 });
+            });
+
+            it('finds the target when a wrapper is present', () => {
+
+                const targetElement = createActual({
+                    name: 'AnotherElement',
+                    attribs: { },
+                    children: []
+                });
+
+                return expect(createActual(
+                    { name: 'WrapperElement', attribs: {}, children: [
+                        {
+                            name:'SomeElement',
+                            attribs: { id: 'foo'},
+                            children: [ targetElement ]
+                        }
+                    ]
+                    }
+                ), 'when diffed with options against', { findTargetAttrib: 'eventTarget', diffWrappers: false }, createExpected({
+                    name: 'SomeElement',
+                    attribs: { id: expect.it('to eventually have value', 'foo') },
+                    children: [{
+                        name: 'AnotherElement',
+                        attribs: { eventTarget: true },
+                        children: []
+                    }]
+                }), 'to satisfy', {
+                    diff: {
+                        type: 'WRAPPERELEMENT'
+                    },
+                    weight: Diff.DefaultWeights.OK,
+                    target: targetElement
+                });
+
             });
         });
     });

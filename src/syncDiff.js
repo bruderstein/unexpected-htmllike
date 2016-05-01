@@ -2,7 +2,6 @@ import ArrayChanges from 'array-changes';
 import ObjectAssign from 'object-assign';
 import isNativeType from './isNativeType';
 import convertToDiff from './convertToDiff';
-import LineBreaker from './lineBreaker';
 import Weights from './Weights';
 import * as DiffCommon from './diffCommon';
 import RequiresAsyncError from './requiresAsyncError';
@@ -135,7 +134,6 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
     diffResult.children = contentResult.diff;
     weights.addWeight(contentResult.weight);
     target = target || contentResult.target;
-
 
     return {
         diff: diffResult,
@@ -297,7 +295,7 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
         });
 
 
-    let target;
+    let target = undefined;
     changes.forEach(diffItem => {
 
         let itemResult, cachedDiff;
