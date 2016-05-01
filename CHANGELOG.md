@@ -55,3 +55,7 @@ i.e. Caller need to check if they are a promise (existence of `result.then` is f
 
 ### v2.0.2
 * Fix outputting inspected attributes (e.g objects). Could previously result in incorrect indenting.
+
+### v2.1.0
+* Add `findTargetAttrib` to the options to allow locating a nested element (see the [readme](https://github.com/bruderstein/unexpected-htmllike#findtargetattrib-string)!)
+
