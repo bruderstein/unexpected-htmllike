@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "array-changes": "^1.2.1",
-    "array-changes-async": "^2.1.0",
+    "array-changes-async": "^2.2.0",
     "object-assign": "^4.0.1"
   },
   "license": "MIT",
