@@ -148,7 +148,7 @@ export default function painter(pen, description, diffFn, inspect) {
                                     this.error('mismatched type').sp().block(diffFn(typeof description.value, typeof description.diff.expectedValue).diff);
                                 });
                             } else if (typeof description.value === typeof description.diff.expectedValue) {
-                                this.append(diffFn(description.value, description.diff.expectedValue).diff);
+                                this.block(actualString).sp().annotationBlock(function () { this.append(diffFn(description.value, description.diff.expectedValue).diff); })
                             } else {
                                 this.block(function () {
                                     this.append(diffFn('' + description.value, '' + description.diff.expectedValue).diff);
@@ -273,7 +273,6 @@ function outputChildren(pen, description, inspect, diffFn, forcedOnNewLine) {
     if (childrenOnSeparateLines) {
         pen.outdentLines().nl().i();
     }
-    // TO HERE
 }
 
 function outputAttribute(pen, name, value, diff, inspect, diffFn) {

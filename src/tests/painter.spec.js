@@ -704,8 +704,36 @@ describe('Painter', () => {
 
         expect(pen.toString(), 'to equal',
             '<div>\n' +
-            '  -abc\n' +
-            '  +abcd\n' +
+            '  abc // -abc\n' +
+            '      // +abcd\n' +
+            '</div>');
+
+    });
+    
+    it('outputs a multiline changed text content', () => {
+
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'div',
+            children: [
+                {
+                    type: 'CONTENT',
+                    value: 'abc\ndef\nghi',
+                    diff: {
+                        type: 'changed',
+                        expectedValue: 'abcd\nefgh\nghi'
+                    }
+                }
+            ]
+        }, expect.diff, expect.inspect);
+
+        expect(pen.toString(), 'to equal',
+            '<div>\n' +
+            '  abc // -abc\n' +
+            '  def // -def\n' +
+            '  ghi // +abcd\n' +
+            '      // +efgh\n' +
+            '      //  ghi\n' +
             '</div>');
 
     });

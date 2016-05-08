@@ -289,8 +289,8 @@ describe('HtmlLikeComponent', () => {
             }), 'when diffed as html against', createExpected({
                 name: 'div', attribs: { id: 'foo' }, children: ['def']
             }), 'to output with weight', '<div id="foo">\n' +
-            '  -abc\n' +
-            '  +def\n' +
+            '  abc // -abc\n' +
+            '      // +def\n' +
             '</div>', HtmlLikeUnexpected.DefaultWeights.STRING_CONTENT_MISMATCH);
         });
 
@@ -321,8 +321,8 @@ describe('HtmlLikeComponent', () => {
             }), 'to output with weight', '<div id="foo">\n' +
             '  <span>one</span>\n' +
             '  <span>\n' +
-            '    -two\n' +
-            '    +updated\n' +
+            '    two // -two\n' +
+            '        // +updated\n' +
             '  </span>\n' +
             '</div>', HtmlLikeUnexpected.DefaultWeights.STRING_CONTENT_MISMATCH);
         });
@@ -725,8 +725,8 @@ describe('HtmlLikeComponent', () => {
                 '                        // -childfoo\n' +
                 '                        // +other\n' +
                 '    >\n' +
-                '      -two\n' +
-                '      +changed\n' +
+                '      two // -two\n' +
+                '          // +changed\n' +
                 '    </span>\n' +
                 '  </div> // wrapper should be removed\n' +
                 '</body>', HtmlLikeUnexpected.DefaultWeights.WRAPPER_REMOVED +
@@ -897,8 +897,8 @@ describe('HtmlLikeComponent', () => {
                 '    <MidLevel>\n' +
                 '      <span id="childfoo">one</span>\n' +
                 '      <span id="childfoo">\n' +
-                '        -two\n' +
-                '        +changed\n' +
+                '        two // -two\n' +
+                '            // +changed\n' +
                 '      </span>\n' +
                 '    </MidLevel>\n' +
                 '  </TopLevel>\n' +
@@ -964,8 +964,8 @@ describe('HtmlLikeComponent', () => {
             }), 'when checked to contain', createExpected(
                 { name: 'span', attribs: { className: 'foo' }, children: [ 'some content'] }
             ), 'to output', '<span className="foo">\n' +
-            '  -some different content\n' +
-            '  +some content\n' +
+            '  some different content // -some different content\n' +
+            '                         // +some content\n' +
             '</span>');
         });
 
@@ -1015,8 +1015,8 @@ describe('HtmlLikeComponent', () => {
             }), 'to output', '<div>\n' +
             '  <wrapper className="the-wrapper">\n' +
             '    <span className="foo">\n' +
-            '      -some different content\n' +
-            '      +some content\n' +
+            '      some different content // -some different content\n' +
+            '                             // +some content\n' +
             '    </span>\n' +
             '  </wrapper>\n' +
             '</div>');
