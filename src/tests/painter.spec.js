@@ -35,7 +35,7 @@ describe('Painter', () => {
     let pen;
 
     beforeEach(() => {
-        pen = expect.output.clone();
+        pen = expect.output.clone('text');
         pen.addStyle('appendInspected', function (arg) {
             this.append(expect.inspect(arg));
         }, true);
@@ -318,6 +318,7 @@ describe('Painter', () => {
             '                                   // {\n' +
             '                                   //   abc: 123,\n' +
             "                                   //   def: 'ghi' // should equal 'ghij'\n" +
+            '                                   //              //\n' +
             '                                   //              // -ghi\n' +
             '                                   //              // +ghij\n' +
             '                                   // }\n' +
@@ -445,6 +446,7 @@ describe('Painter', () => {
         '                                             // {\n' +
         "                                             //   a: 'hello',\n" +
         "                                             //   b: 'foo', // should equal 'bar'\n" +
+        '                                             //             //\n' +
         '                                             //             // -foo\n' +
         '                                             //             // +bar\n' +
         '                                             //   c: false // should equal true\n' +
@@ -1116,7 +1118,7 @@ describe('Painter', () => {
         }, expect.diff, expect.inspect);
 
         expect(pen, 'to equal',
-            expect.output.clone().gray('<div className="foo">')
+            expect.output.clone('text').gray('<div className="foo">')
                     .nl().indentLines().i()
                     .block(function () {
                         this.prismPunctuation('<')

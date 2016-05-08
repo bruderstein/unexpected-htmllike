@@ -53,6 +53,11 @@ module.exports = {
             }
         });
 
+        expect.addAssertion('<expect.it> to have string representation <string>', (expect, subject, value) => {
+            expect.errorMode = 'bubble';
+            expect(expect.inspect(subject).toString('text'), 'to equal', value);
+        });
+
         expect.addAssertion('<any> to inspect as <string>', (expect, subject, value) => {
             expect(expect.inspect(subject).toString(), 'to equal', value);
         });
@@ -123,7 +128,7 @@ module.exports = {
 
         expect.addAssertion('<HtmlDiffResult> to output <string>', (expect, subject, value) => {
             const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
-            const pen = expect.output.clone();
+            const pen = expect.output.clone('text');
             pen.addStyle('appendInspected', function (arg) {
                 this.append(expect.inspect(arg));
             }, true);
@@ -134,7 +139,7 @@ module.exports = {
         expect.addAssertion('<HtmlDiffResult> to output with weight <string> <number>', (expect, subject, value, weight) => {
 
             const htmlLikeUnexpected = new HtmlLikeUnexpected(TestActualAdapter);
-            const pen = expect.output.clone();
+            const pen = expect.output.clone('text');
             pen.addStyle('appendInspected', function (arg) {
                 this.append(expect.inspect(arg));
             }, true);

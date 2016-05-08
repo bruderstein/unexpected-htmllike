@@ -92,6 +92,7 @@ describe('diff', () => {
                                     '    { nested: true, foo: \'bar\' },\n' +
                                     '    {\n' +
                                     '      foo: \'baz\' // should equal \'different\'\n' +
+                                    '                 //\n' +
                                     '                 // -baz\n' +
                                     '                 // +different\n' +
                                     '    }\n' +
@@ -1407,8 +1408,8 @@ describe('diff', () => {
                             children: [
                                 {
                                     type: 'CONTENT',
-                                    value: expect.it('to equal', expect.it('to eventually have value', 'three'))
-                                    // The double expect.it here so that the 'to satisfy' above doesn't run the expect.it
+                                    value: expect.it('to be an', 'expect.it') //expect.it('to eventually have value', 'three'))
+                                        .and('to have string representation', "expect.it('to eventually have value', 'three')")
                                 }
                             ],
                             diff: { type: 'missing' }
