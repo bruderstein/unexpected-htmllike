@@ -59,3 +59,5 @@ i.e. Caller need to check if they are a promise (existence of `result.then` is f
 ### v2.1.0
 * Add `findTargetAttrib` to the options to allow locating a nested element (see the [readme](https://github.com/bruderstein/unexpected-htmllike#findtargetattrib-string)!)
 
+### v2.1.1
+* Change text content diff to be an annotated block (a block with `//` before each line), to make the diff more readable

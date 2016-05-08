@@ -27,6 +27,7 @@ please report it in the github issues: https://github.com/bruderstein/unexpected
 `inspect`, `diff` and `contains` methods are provided, allowing diffing of any HTML/XML like structure, including wrapper detection.
 e.g.
 Assuming a "actual" representation of the following
+
 ```xml
 <div id="outer">
    <div id="the-wrapper">
@@ -35,6 +36,7 @@ Assuming a "actual" representation of the following
 </div>
 ```
 If the expected is
+
 ```xml
 <div id="outer">
    <span>Some text</span>
@@ -82,6 +84,7 @@ expect.addAssertion('<ReactElement> to have rendered <ReactElement>', function (
         }
     });
 });
+```
 
 # Adapter API
 
@@ -112,6 +115,7 @@ then the classes can be optionally diffed using class semantics.
 
 Pass the adapter object (ie. an object with `getName`, `getAttributes`, and `getChildren` methods)
 e.g.
+
 ```js
 var JsxAdapter = require('unexpected-htmllike-jsx-adapter');
 var UnexpectedHtmlLike = require('unexpected-htmllike');
