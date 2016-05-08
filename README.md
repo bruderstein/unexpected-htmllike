@@ -1,3 +1,7 @@
+[![Build Status](https://travis-ci.org/bruderstein/unexpected-htmllike.svg?branch=master)](https://travis-ci.org/bruderstein/unexpected-htmllike)
+[![Coverage Status](https://coveralls.io/repos/github/bruderstein/unexpected-htmllike/badge.svg?branch=master)](https://coveralls.io/github/bruderstein/unexpected-htmllike?branch=master)
+[![npm version](https://badge.fury.io/js/unexpected-htmllike.svg)](https://badge.fury.io/js/unexpected-htmllike)
+
 # unexpected-htmllike
 
 ![tattoo](https://cloud.githubusercontent.com/assets/91716/11163196/8215efc2-8ac6-11e5-86da-7285585ab3ef.jpg)
