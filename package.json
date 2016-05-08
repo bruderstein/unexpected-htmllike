@@ -19,9 +19,9 @@
   },
   "devDependencies": {
     "babel": "^5.8.29",
-    "babel-eslint": "^5.0.0",
+    "babel-eslint": "^6.0.4",
     "coveralls": "^2.11.9",
-    "eslint": "^2.2.0",
+    "eslint": "^2.9.0",
     "eslint-plugin-react": "^4.2.0",
     "istanbul": "^0.4.3",
     "magicpen": "^5.7.0",
