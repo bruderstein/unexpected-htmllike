@@ -1,5 +1,6 @@
 
 import HtmlLikeUnexpected from '../index';
+import UnexpectedMagicPen from 'unexpected-magicpen';
 import MagicPenPrism from 'magicpen-prism';
 import Diff from '../diff';
 
@@ -31,6 +32,7 @@ module.exports = {
             return Diff.diffElements(TestActualAdapter, TestExpectedAdapter, actual, expected, expect, options);
         }
 
+        expect.use(UnexpectedMagicPen);
         expect.use(MagicPenPrism);
 
         expect.addType({

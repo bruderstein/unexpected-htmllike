@@ -24,11 +24,12 @@
     "eslint": "^2.9.0",
     "eslint-plugin-react": "^4.2.0",
     "istanbul": "^0.4.3",
-    "magicpen": "^5.7.0",
+    "magicpen": "^5.11.0",
     "magicpen-prism": "^2.2.1",
     "mocha": "^2.3.3",
     "mocha-lcov-reporter": "^1.2.0",
-    "unexpected": "^10.10.0"
+    "unexpected": "^10.18.1",
+    "unexpected-magicpen": "^0.2.2"
   },
   "dependencies": {
     "array-changes": "^1.2.1",

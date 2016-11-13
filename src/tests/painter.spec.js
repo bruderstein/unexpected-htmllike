@@ -1,6 +1,7 @@
 
 import Unexpected from 'unexpected';
 import MagicPenPrism from 'magicpen-prism';
+import UnexpectedMagicPen from 'unexpected-magicpen';
 
 import Painter from '../painter';
 
@@ -8,6 +9,7 @@ import { shortFunc, longFunc, longFunc2, longSingleLine, shortMultiLine } from '
 
 const expect = Unexpected
     .clone()
+    .use(UnexpectedMagicPen)
     .use(MagicPenPrism);
 
 expect.output.preferredWidth = 80;
