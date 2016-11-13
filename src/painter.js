@@ -148,7 +148,16 @@ export default function painter(pen, description, diffFn, inspect) {
                                     this.error('mismatched type').sp().block(diffFn(typeof description.value, typeof description.diff.expectedValue).diff);
                                 });
                             } else if (typeof description.value === typeof description.diff.expectedValue) {
-                                this.block(actualString).sp().annotationBlock(function () { this.append(diffFn(description.value, description.diff.expectedValue).diff); })
+                                this.block(actualString).sp().annotationBlock(function () { 
+                                    const valueDiff = diffFn(description.value, description.diff.expectedValue);
+                                    if (valueDiff) {
+                                        this.append(valueDiff.diff); 
+                                    } else {
+                                        this.append(function () {
+                                            this.error('should be').sp().text(description.diff.expectedValue).forceLineBreakBefore();
+                                        });
+                                    }
+                                });
                             } else {
                                 this.block(function () {
                                     this.append(diffFn('' + description.value, '' + description.diff.expectedValue).diff);

@@ -712,6 +712,30 @@ describe('Painter', () => {
 
     });
     
+    it('outputs a changed numerical content', () => {
+        
+        Painter(pen, {
+            type: 'ELEMENT',
+            name: 'div',
+            children: [
+                {
+                    type: 'CONTENT',
+                    value: 42,
+                    diff: {
+                        type: 'changed',
+                        expectedValue: 84
+                    }
+                }
+            ]
+        }, expect.diff, expect.inspect);
+        
+        expect(pen.toString(), 'to equal',
+          '<div>\n' +
+          '  42 // should be 84\n' +
+          '</div>');
+        
+    });
+    
     it('outputs a multiline changed text content', () => {
 
         Painter(pen, {
