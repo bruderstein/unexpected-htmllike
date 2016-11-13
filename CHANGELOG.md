@@ -61,3 +61,7 @@ i.e. Caller need to check if they are a promise (existence of `result.then` is f
 
 ### v2.1.1
 * Change text content diff to be an annotated block (a block with `//` before each line), to make the diff more readable
+
+### v2.1.2
+* Fix a bug displaying the diff when the non-string content didn't match.
+
