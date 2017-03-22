@@ -18,22 +18,22 @@
     "unexpected": "^10.0.0"
   },
   "devDependencies": {
-    "babel": "^5.8.29",
-    "babel-eslint": "^6.0.4",
+    "babel": "^6.23.0",
+    "babel-eslint": "^7.2.0",
     "coveralls": "^2.11.9",
-    "eslint": "^2.9.0",
-    "eslint-plugin-react": "^4.2.0",
+    "eslint": "^3.18.0",
+    "eslint-plugin-react": "^6.10.3",
     "istanbul": "^0.4.3",
     "magicpen": "^5.11.0",
     "magicpen-prism": "^2.2.1",
-    "mocha": "^2.3.3",
+    "mocha": "^3.2.0",
     "mocha-lcov-reporter": "^1.2.0",
     "unexpected": "^10.18.1",
     "unexpected-magicpen": "^0.2.2"
   },
   "dependencies": {
-    "array-changes": "^1.2.1",
-    "array-changes-async": "^2.2.0",
+    "array-changes": "^2.0.0",
+    "array-changes-async": "^3.0.0",
     "object-assign": "^4.0.1"
   },
   "license": "MIT",
