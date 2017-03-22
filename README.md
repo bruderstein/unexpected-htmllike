@@ -4,6 +4,8 @@
 
 # unexpected-htmllike
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/bruderstein/unexpected-htmllike.svg)](https://greenkeeper.io/)
+
 ![tattoo](https://cloud.githubusercontent.com/assets/91716/11163196/8215efc2-8ac6-11e5-86da-7285585ab3ef.jpg)
 (Image from http://www.idyllramblings.com/2010/03/the-geekiest-tattoos-you-ever-did-see.html)
 
