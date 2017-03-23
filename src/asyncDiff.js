@@ -14,6 +14,7 @@ function diffElements(actualAdapter, expectedAdapter, actual, expected, expect, 
     if (actualAdapter.classAttributeName && actualAdapter.classAttributeName === expectedAdapter.classAttributeName) {
         options.classAttributeName = actualAdapter.classAttributeName;
     }
+    return expect.promise.reject(new Error('Do not call async assertions (yet)'));
 
     return diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, options)
         .then(diffResult => {
@@ -123,7 +124,7 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
     diffResult = DiffCommon.getElementResult(actualName, expectedName, weights, options);
 
     let target;
-    const attributesResultPromise = diffAttributes(actualAdapter.getAttributes(actual), expectedAdapter.getAttributes(expected), expect, options)
+    const attributesResultPromise = diffAttributes(actualAdapter.getAttributes(actual), expectedAdapter.getAttributes(expected), expect, options, new Weights())
         .then(attribResult => {
             diffResult.attributes = attribResult.diff;
             weights.addWeight(attribResult.weight);
@@ -160,9 +161,9 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
 
 }
 
-function diffAttributes(actualAttributes, expectedAttributes, expect, options) {
+function diffAttributes(actualAttributes, expectedAttributes, expect, options, diffWeights) {
 
-    const result = DiffCommon.diffAttributes(actualAttributes, expectedAttributes, expect, options);
+    const result = DiffCommon.diffAttributes(actualAttributes, expectedAttributes, expect, options, diffWeights);
     if (typeof result.then === 'function') {
         return result;
     }

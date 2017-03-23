@@ -1,10 +1,10 @@
 
-let unique = 1000;
 
 function Weights() {
-    this.unique = ++unique;
+    this._children = [];
     this.real = 0;
     this.total = 0;
+    this.thisLevel = 0;
 }
 
 Weights.prototype.add = function (weight) {
@@ -14,6 +14,7 @@ Weights.prototype.add = function (weight) {
 //    console.log('Adding ', weight, 'to', this.name, 'results in ', this.total, this.real);
     this.real += weight;
     this.total += weight;
+    this.thisLevel += weight;
     return this;
 };
 
@@ -22,6 +23,7 @@ Weights.prototype.addReal = function (weight) {
         throw new Error('addReal takes a numeric parameter');
     }
     this.real += weight;
+    this.thisLevel += weight;
     //console.log('Adding real', weight, 'to', this.name, 'results in', this.real);
     return this;
 };
@@ -31,17 +33,15 @@ Weights.prototype.addTotal = function (weight) {
         throw new Error('addTotal takes a numeric parameter');
     }
     this.total += weight;
-    //console.log('Adding total', weight, 'to', this.name, 'results in', this.total);
     return this;
 };
 
-Weights.prototype.addWeight = function (weight) {
+Weights.prototype.addChildWeight = function (weight) {
     if (!weight instanceof Weights) {
         throw new Error('addWeight can only add other Weight objects');
     }
-    this.real += weight.real;
-    this.total += weight.total;
-    //console.log('Adding total', weight.total, 'and real', weight.real, 'to', this.name, 'results in (total/real)', this.total, this.real);
+    weight._parent = this;
+    this._children.push(weight);
 
     if (isNaN(this.real)) {
         throw new Error('caused nan');
@@ -49,9 +49,37 @@ Weights.prototype.addWeight = function (weight) {
     return this;
 };
 
-Weights.prototype.setName = function (name) {
-    this.name = '(' + this.unique + ') ' + name;
-    return this;
+Weights.prototype.createChild = function () {
+    const child = new Weights();
+    child._parent = this;
+    this._children.push(child);
+    return child;
 };
+
+Weights.prototype.results = function () {
+    const subtreeWeights = addSubtree(this._children);
+    return {
+        thisWeight: this.real,
+        subtreeWeight: subtreeWeights.real,
+        treeWeight: this.real + subtreeWeights.real,
+        totalTreeWeight: this.total + subtreeWeights.total
+    };
+};
+
+Weights.prototype.getSubtree = function () {
+    return addSubtree(this._children);
+};
+
+
+function addSubtree(children) {
+    let subtreeWeightReal = 0;
+    let subtreeWeightTotal = 0;
+    for(let i = children.length - 1; i >= 0; --i) {
+        let subtree = children[i].getSubtree();
+        subtreeWeightReal += children[i].real + subtree.real;
+        subtreeWeightTotal += children[i].total + subtree.total;
+    }
+    return { real: subtreeWeightReal, total: subtreeWeightTotal };
+}
 
 module.exports = Weights;

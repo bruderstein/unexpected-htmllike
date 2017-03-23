@@ -65,7 +65,7 @@ expect.addAssertion('<string> to eventually equal <string>', function (expect, s
     });
 });
 
-describe('contains', () => {
+describe.skip('contains', () => {
 
     it('finds an exact match', () => {
         return expect(createActual(
@@ -304,7 +304,7 @@ describe('contains', () => {
         });
     });
 
-    it('finds a nested component with missing children and extra attribute (async)', () => {
+    it.skip('finds a nested component with missing children and extra attribute (async)', () => {
         return expect(createActual({
             name: 'div', attribs: {}, children: [
                 {

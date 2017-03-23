@@ -15,35 +15,39 @@ function diffElements(actualAdapter, expectedAdapter, actual, expected, expect, 
         options.classAttributeName = actualAdapter.classAttributeName;
     }
 
-    var diffResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, options);
+    var weights = new Weights();
+    var diffResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, weights, options);
+    var weightResults = weights.results()
     return {
         diff: diffResult.diff,
-        weight: diffResult.weight.real,
-        target: diffResult.target
+        target: diffResult.target,
+        weights: weightResults,
+        weight: weightResults.treeWeight
     };
 }
 
-function diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, options) {
+function diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, weights, options) {
 
-    let diffResult = diffElement(actualAdapter, expectedAdapter, actual, expected, expect, options);
+    let diffWeights = new Weights();
+    let diffResult = diffElement(actualAdapter, expectedAdapter, actual, expected, expect, diffWeights, options);
 
-    if (diffResult.weight.real !== DiffCommon.WEIGHT_OK && !isNativeType(actual)) {
+    if (diffResult.weights.treeWeight !== DiffCommon.WEIGHT_OK && !isNativeType(actual)) {
 
         const actualChildren = actualAdapter.getChildren(actual);
 
         if (actualChildren.length === 1) {
             // Try as wrapper
-            const wrapperResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actualChildren[0], expected, expect, options);
-            return DiffCommon.checkElementWrapperResult(actualAdapter, actual, diffResult, wrapperResult, options);
+            const wrapperWeights = new Weights();
+            const wrapperResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actualChildren[0], expected, expect, wrapperWeights, options);
+            return DiffCommon.checkElementWrapperResult(actualAdapter, actual, diffResult, diffWeights, wrapperResult, wrapperWeights, options);
         }
     }
     return diffResult;
 }
 
 
-function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, options) {
+function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, weights, options) {
 
-    const weights = new Weights();
     let diffResult = {};
 
     const actualIsNative = isNativeType(actual);
@@ -64,7 +68,6 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
             weights.add(options.weights.STRING_CONTENT_MISMATCH);
             return {
                 diff: diffResult,
-                weight: weights
             };
         }
 
@@ -75,47 +78,47 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
 
         diffResult.type = 'CONTENT';
         diffResult.value = actual;
+        ObjectAssign(diffResult, weights.results());
 
         return {
             diff: diffResult,
-            weight: weights
         };
     }
 
     if (actualIsNative && expectedIsNative) {
 
-        diffResult = DiffCommon.getNativeContentResult(actual, expected, weights, options);
+        diffResult = DiffCommon.getNativeContentResult(actual, expected, weights.createChild(), options);
 
+        ObjectAssign(diffResult, weights.results());
         return {
             diff: diffResult,
-            weight: weights
         };
     }
 
     if (actualIsNative && !expectedIsNative) {
-        diffResult = DiffCommon.getNativeNonNativeResult(actual, expected, weights, expectedAdapter, options);
+        diffResult = DiffCommon.getNativeNonNativeResult(actual, expected, weights.createChild(), expectedAdapter, options);
 
+        ObjectAssign(diffResult, weights.results());
         return {
-            diff: diffResult,
-            weight: weights
+            diff: diffResult
         };
     }
 
     if (!actualIsNative && expectedIsNative) {
-        diffResult = DiffCommon.getNonNativeNativeResult(actual, expected, weights, actualAdapter, expectedAdapter, options);
-
+        diffResult = DiffCommon.getNonNativeNativeResult(actual, expected, weights.createChild(), actualAdapter, expectedAdapter, options);
+        ObjectAssign(diffResult, weights.results());
         return {
-            diff: diffResult,
-            weight: weights
+            diff: diffResult
         };
     }
 
     const actualName = actualAdapter.getName(actual);
     const expectedName = expectedAdapter.getName(expected);
 
-    diffResult = DiffCommon.getElementResult(actualName, expectedName, weights, options);
+    diffResult = DiffCommon.getElementResult(actualName, expectedName, weights.createChild(), options);
 
-    const attributesResult = DiffCommon.diffAttributes(actualAdapter.getAttributes(actual), expectedAdapter.getAttributes(expected), expect, options);
+
+    const attributesResult = DiffCommon.diffAttributes(actualAdapter.getAttributes(actual), expectedAdapter.getAttributes(expected), expect, weights.createChild(), options);
     if (typeof attributesResult.then === 'function') {
         // Promise returned, we need to do this async
         throw new RequiresAsyncError();
@@ -127,24 +130,27 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, o
         target = actual;
     }
     diffResult.attributes = attributesResult.diff;
-    weights.addWeight(attributesResult.weight);
+    //weights.addWeight(attributesResult.weight);
 
-    const contentResult = diffContent(actualAdapter, expectedAdapter, actualAdapter.getChildren(actual), expectedAdapter.getChildren(expected), expect, options);
+    const contentWeights = weights.createChild();
+    const contentResult = diffContent(actualAdapter, expectedAdapter,
+      actualAdapter.getChildren(actual), expectedAdapter.getChildren(expected),
+      expect, contentWeights, options);
 
     diffResult.children = contentResult.diff;
-    weights.addWeight(contentResult.weight);
+    diffResult.weights = weights.results();
+    weights.addChildWeight(contentWeights);
     target = target || contentResult.target;
 
     return {
         diff: diffResult,
-        weight: weights,
         target: target
     };
 
 }
 
 
-function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, options) {
+function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, weights, options) {
 
     let bestWeight = null;
     let bestDiff = null;
@@ -161,7 +167,7 @@ function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, o
     //    });
     //}
 
-    const childrenResult = diffChildren(actualAdapter, expectedAdapter, actual, expected, expect, options);
+    const childrenResult = diffChildren(actualAdapter, expectedAdapter, actual, expected, expect, weights, options);
 
     if (!bestWeight || childrenResult.weight.real < bestWeight.real) {
         bestDiff = childrenResult.diff;
@@ -178,7 +184,7 @@ function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, o
         // Also covered here is a wrapper around several children
 
         const actualChildren = actualAdapter.getChildren(actual[0]);
-        wrapperResult = diffContent(actualAdapter, expectedAdapter, actualChildren, expected, expect, options);
+        wrapperResult = diffContent(actualAdapter, expectedAdapter, actualChildren, expected, expect, weights, options);
     }
 
     if (wrapperResult) {
@@ -203,21 +209,20 @@ function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, o
     }
     return {
         diff: bestDiff,
-        weight: bestWeight,
         target: bestTarget
     };
 }
 
 
 
-function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options) {
+function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, weights, options) {
 
 
     let onlyExact = true;
     let bestDiffResult = null;
 
 
-    const exactDiffResult = tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExact);
+    const exactDiffResult = tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, weights, options, onlyExact);
 
     bestDiffResult = exactDiffResult;
 
@@ -226,20 +231,20 @@ function diffChildren(actualAdapter, expectedAdapter, actualChildren, expectedCh
     let changesDiffResult;
     if (exactDiffResult.weight.real !== 0 && exactDiffResult.insertCount && exactDiffResult.removeCount) {
         onlyExact = false;
-        changesDiffResult = tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExact);
+        changesDiffResult = tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, weights, options, onlyExact);
     }
 
 
     if (changesDiffResult && changesDiffResult.weight.real < bestDiffResult.weight.real) {
         bestDiffResult = changesDiffResult;
     }
+
     return bestDiffResult;
 }
 
 
-function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, options, onlyExactMatches) {
+function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expectedChildren, expect, diffWeights, options, onlyExactMatches) {
 
-    let diffWeights = new Weights();
     const diffResult = [];
 
     let insertCount = 0;
@@ -258,10 +263,10 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
             const cacheIndex = (aIndex * expectedChildrenLength) + bIndex;
             let elementDiff = cachedDiffs[cacheIndex];
             if (!elementDiff) {
-                elementDiff = diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options);
+                elementDiff = diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, new Weights(), options);
                 cachedDiffs[cacheIndex] = elementDiff;
             }
-            return (cachedDiffs[cacheIndex].weight.real === DiffCommon.WEIGHT_OK);
+            return (cachedDiffs[cacheIndex].real === DiffCommon.WEIGHT_OK);
         },
 
         function (a, b, aIndex, bIndex) {
@@ -270,10 +275,10 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
                 const cacheIndex = (aIndex * expectedChildrenLength) + bIndex;
                 let elementDiff = cachedDiffs[cacheIndex];
                 if (!elementDiff) {
-                    elementDiff = diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, options);
+                    elementDiff = diffElementOrWrapper(actualAdapter, expectedAdapter, a, b, expect, new Weights(), options);
                     cachedDiffs[cacheIndex] = elementDiff;
                 }
-                return elementDiff.weight.real === DiffCommon.WEIGHT_OK;
+                return elementDiff.real === DiffCommon.WEIGHT_OK;
             }
             var aIsNativeType = isNativeType(a);
             var bIsNativeType = isNativeType(b);
@@ -298,6 +303,7 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
     let target = undefined;
     changes.forEach(diffItem => {
 
+        const itemWeight = diffWeights.createChild();
         let itemResult, cachedDiff;
         if (typeof diffItem.actualIndex === 'number' && typeof diffItem.expectedIndex === 'number') {
             const cacheIndex = (diffItem.actualIndex * expectedChildrenLength) + diffItem.expectedIndex;
@@ -318,7 +324,7 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
                     itemResult = convertToDiff(expectedAdapter, diffItem.value);
                 }
                 if (options.diffMissingChildren) {
-                    diffWeights.add(options.weights.CHILD_MISSING);
+                    itemWeight.add(options.weights.CHILD_MISSING);
                     itemResult.diff = {
                         type: 'missing'
                     };
@@ -337,9 +343,9 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
                     itemResult.diff = {
                         type: 'extra'
                     };
-                    diffWeights.addReal(options.weights.CHILD_INSERTED);
+                    itemWeight.addReal(options.weights.CHILD_INSERTED);
                 }
-                diffWeights.addTotal(options.weights.CHILD_INSERTED);
+                itemWeight.addTotal(options.weights.CHILD_INSERTED);
                 diffResult.push(itemResult);
                 break;
 
@@ -350,7 +356,8 @@ function tryDiffChildren(actualAdapter, expectedAdapter, actualChildren, expecte
             case 'equal': //eslint-disable-line no-fallthrough
             default:
                 diffResult.push(cachedDiff.diff);
-                diffWeights.addWeight(cachedDiff.weight);
+                console.log(cachedDiff.diff.thisWeight);
+                itemWeight.addReal(cachedDiff.diff.thisWeight);
                 break;
         }
     });

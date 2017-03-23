@@ -68,4 +68,58 @@ describe('Weights', () => {
             });
         });
     });
+
+    describe('creating children', () => {
+        it('sets thisWeight is only the current child', () => {
+            weights.addReal(4);
+            const child = weights.createChild();
+            child.addReal(10);
+            expect(child.results(), 'to satisfy', {
+                thisWeight: 10
+            });
+        });
+
+        it('sets subtreeWeight to include the child', () => {
+          weights.addReal(4);
+          const child = weights.createChild();
+          child.addReal(10);
+           expect(weights.results(), 'to satisfy', {
+               thisWeight: 4,
+               subtreeWeight: 10
+           });
+        });
+
+        it('includes subtrees from grandchildren', () => {
+          weights.addReal(4);
+          const child = weights.createChild();
+          child.addReal(10);
+          const grandchild = child.createChild();
+          grandchild.addReal(7);
+          expect(weights.results(), 'to satisfy', {
+              thisWeight: 4,
+              subtreeWeight: 17
+          });
+        });
+
+        it('includes subtrees from multiple children', () => {
+          weights.addReal(4);
+          const child = weights.createChild();
+          child.addReal(10);
+          const child2 = weights.createChild();
+          child2.addReal(7);
+          expect(weights.results(), 'to satisfy', {
+            thisWeight: 4,
+            subtreeWeight: 17
+          });
+        });
+
+        it('does not include current in subtree in a child', () => {
+          weights.addReal(4);
+          const child = weights.createChild();
+          child.addReal(10);
+          expect(child.results(), 'to satisfy', {
+            subtreeWeight: 0
+          });
+        });
+    });
 });

@@ -48,11 +48,11 @@ export const getOptions = function (options) {
     }
 };
 
-export const checkElementWrapperResult = function (actualAdapter, actual, currentDiffResult, wrapperResult, options) {
+export const checkElementWrapperResult = function (actualAdapter, actual, currentDiffResult, diffWeights, wrapperResult, wrapperWeights, options) {
 
     let diffResult = currentDiffResult;
     const wrapperWeight = options.diffWrappers ? options.weights.WRAPPER_REMOVED : WEIGHT_OK;
-    if ((wrapperWeight + wrapperResult.weight.real) < diffResult.weight.real) {
+    if ((wrapperWeight + wrapperWeights.results().treeWeight) < diffWeights.results().treeWeight) {
         // It is (better as) a wrapper.
         diffResult = {
             diff: convertToDiff(actualAdapter, actual, { includeChildren: false }),
@@ -156,9 +156,9 @@ export const getElementResult = function (actualName, expectedName, weights, opt
     return diffResult;
 };
 
-export const diffAttributes = function (actualAttributes, expectedAttributes, expect, options) {
+export const diffAttributes = function (actualAttributes, expectedAttributes, expect, diffWeights, options) {
 
-    let diffWeights = new Weights();
+    // let diffWeights = weights
     const diffResult = [];
     // The promises array collects up promises returned from 'to satisfy' assertions
     // on attributes. The promiseHandler is then called at the end if there are any promises
@@ -169,13 +169,14 @@ export const diffAttributes = function (actualAttributes, expectedAttributes, ex
     Object.keys(actualAttributes).forEach(attrib => {
 
         const attribResult = { name: attrib, value: actualAttributes[attrib] };
+        const attribWeight = diffWeights.createChild();
         diffResult.push(attribResult);
 
         if (expectedAttributes.hasOwnProperty(attrib)) {
             const expectedAttrib = expectedAttributes[attrib];
 
             if (attrib === options.classAttributeName && !options.diffExactClasses && typeof expectedAttrib === 'string') {
-                getClassDiff(actualAttributes[attrib], expectedAttributes[attrib], attribResult, diffWeights, options);
+                getClassDiff(actualAttributes[attrib], expectedAttributes[attrib], attribResult, attribWeight, options);
                 return;
             }
 
@@ -211,7 +212,7 @@ export const diffAttributes = function (actualAttributes, expectedAttributes, ex
             if (expectResult && typeof expectResult.isPending === 'function') {
                 if (expectResult.isPending()) {
                     promises.push(expectResult.then(() => {}, e => {
-                        diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
+                        attribWeight.add(options.weights.ATTRIBUTE_MISMATCH);
                         attribResult.diff = {
                             type: 'changed',
                             expectedValue: expectedAttributes[attrib],
@@ -219,7 +220,7 @@ export const diffAttributes = function (actualAttributes, expectedAttributes, ex
                         };
                     }));
                 } else if (expectResult.isRejected()) {
-                    diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
+                    attribWeight.add(options.weights.ATTRIBUTE_MISMATCH);
                     attribResult.diff = {
                         type: 'changed',
                         expectedValue: expectedAttributes[attrib],
@@ -227,7 +228,7 @@ export const diffAttributes = function (actualAttributes, expectedAttributes, ex
                     };
                 }
             } else if (expectError) {
-                diffWeights.add(options.weights.ATTRIBUTE_MISMATCH);
+                attribWeight.add(options.weights.ATTRIBUTE_MISMATCH);
                 attribResult.diff = {
                     type: 'changed',
                     expectedValue: expectedAttributes[attrib],
@@ -239,19 +240,20 @@ export const diffAttributes = function (actualAttributes, expectedAttributes, ex
 
         } else {
             if (options.diffExtraAttributes && actualAttributes[attrib] !== undefined) {
-                diffWeights.addReal(options.weights.ATTRIBUTE_EXTRA);
+                attribWeight.addReal(options.weights.ATTRIBUTE_EXTRA);
                 attribResult.diff = {
                     type: 'extra'
                 };
             }
 
-            diffWeights.addTotal(options.weights.ATTRIBUTE_EXTRA);
+            attribWeight.addTotal(options.weights.ATTRIBUTE_EXTRA);
         }
     });
 
     let isTarget = false;
     Object.keys(expectedAttributes).forEach(attrib => {
 
+        const attribWeight = diffWeights.createChild();
         if (!actualAttributes.hasOwnProperty(attrib)) {
             if (attrib === options.findTargetAttrib) {
                 // If it's the findTargetAttrib attribute, but it's not true, we still want to ignore the attribute
@@ -261,9 +263,10 @@ export const diffAttributes = function (actualAttributes, expectedAttributes, ex
                 }
             } else {
                 if (options.diffRemovedAttributes) {
-                    diffWeights.addReal(options.weights.ATTRIBUTE_MISSING);
+                    attribWeight.addReal(options.weights.ATTRIBUTE_MISSING);
                     const attribResult = {
                         name: attrib,
+                        weights: attribWeight.results(),
                         diff: {
                             type: 'missing',
                             expectedValue: expectedAttributes[attrib]
@@ -271,7 +274,7 @@ export const diffAttributes = function (actualAttributes, expectedAttributes, ex
                     };
                     diffResult.push(attribResult);
                 } 
-                diffWeights.addTotal(options.weights.ATTRIBUTE_MISSING);
+                attribWeight.addTotal(options.weights.ATTRIBUTE_MISSING);
             }
         }
     });
