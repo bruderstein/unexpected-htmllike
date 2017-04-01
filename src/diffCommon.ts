@@ -2,10 +2,25 @@
 import ObjectAssign from 'object-assign';
 import convertToDiff from './convertToDiff';
 import Weights from './Weights';
+import { Adapter, ContentDesc, ElementDesc } from "./types";
 
 // Weightings for diff heuristics
+export interface WeightsDefinition {
+  OK?: number;
+  NATIVE_NONNATIVE_MISMATCH?: number;
+  NAME_MISMATCH?: number;
+  ATTRIBUTE_MISMATCH?: number;
+  ATTRIBUTE_MISSING?: number;
+  ATTRIBUTE_EXTRA?: number;
+  STRING_CONTENT_MISMATCH?: number;
+  CONTENT_TYPE_MISMATCH?: number;
+  CHILD_MISSING?: number;
+  CHILD_INSERTED?: number;
+  WRAPPER_REMOVED?: number;
+  ALL_CHILDREN_MISSING?: number;
+}
 
-export const DefaultWeights = {
+export const DefaultWeights: WeightsDefinition = {
     OK: 0,                  // Only here as a convenience for tests, WEIGHT_OK is used as the constant
     NATIVE_NONNATIVE_MISMATCH: 15,
     NAME_MISMATCH: 10,
@@ -26,7 +41,20 @@ export const DefaultWeights = {
                              // for an example)
 };
 
-export const defaultOptions = {
+export interface Options {
+    diffExtraAttributes?: boolean;
+    diffRemovedAttributes?: boolean;
+    diffExtraChildren?: boolean;
+    diffMissingChildren?: boolean;
+    diffWrappers?: boolean;
+    diffExactClasses?: boolean;
+    diffExtraClasses?: boolean;
+    diffMissingClasses?: boolean;
+    weights?: WeightsDefinition;
+    classAttributeName?: string;
+}
+
+export const defaultOptions: Options = {
     diffExtraAttributes: true,
     diffRemovedAttributes: true,
     diffExtraChildren: true,
@@ -39,16 +67,17 @@ export const defaultOptions = {
 
 export const WEIGHT_OK = 0;
 
-export const getOptions = function (options) {
+export const getOptions = function <A,E>(actualAdapter: Adapter<A>, expectedAdapter: Adapter<E>, options: Options): Options {
 
-    options = ObjectAssign({}, DiffCommon.defaultOptions, options);
-    options.weights = ObjectAssign({}, DiffCommon.DefaultWeights, options.weights);
+    options = ObjectAssign({}, defaultOptions, options);
+    options.weights = ObjectAssign({}, DefaultWeights, options.weights);
     if (actualAdapter.classAttributeName && actualAdapter.classAttributeName === expectedAdapter.classAttributeName) {
         options.classAttributeName = actualAdapter.classAttributeName;
     }
+    return options;
 };
 
-export const checkElementWrapperResult = function (actualAdapter, actual, currentDiffResult, diffWeights, wrapperResult, wrapperWeights, options) {
+export const checkElementWrapperResult = function <A>(actualAdapter: Adapter<A>, actual: A, currentDiffResult, diffWeights, wrapperResult, wrapperWeights, options) {
 
     let diffResult = currentDiffResult;
     const wrapperWeight = options.diffWrappers ? options.weights.WRAPPER_REMOVED : WEIGHT_OK;
@@ -94,9 +123,9 @@ export const getExpectItContentErrorResult = function (actual, expected, error, 
     };
 };
 
-export const getNativeContentResult = function (actual, expected, weights, options) {
+export const getNativeContentResult = function <A, E>(actual: any, expected: any, weights: Weights, options: Options): ContentDesc {
 
-    const diffResult = {
+    const diffResult: ContentDesc = {
         type: 'CONTENT',
         value: actual
     };
@@ -116,7 +145,7 @@ export const getNativeContentResult = function (actual, expected, weights, optio
     return diffResult;
 };
 
-export const getNativeNonNativeResult = function (actual, expected, weights, expectedAdapter, options) {
+export const getNativeNonNativeResult = function (actual, expected, weights, expectedAdapter, options): ContentDesc {
 
     weights.add(options.weights.NATIVE_NONNATIVE_MISMATCH);
     return {
@@ -140,10 +169,12 @@ export const getNonNativeNativeResult = function (actual, expected, weights, act
     return diffResult;
 };
 
-export const getElementResult = function (actualName, expectedName, weights, options) {
-    const diffResult = {
+export const getElementResult = function (actualName: string, expectedName: string, weights: Weights, options: Options): ElementDesc {
+    const diffResult: ElementDesc = {
         type: 'ELEMENT',
-        name: actualName
+        name: actualName,
+        attributes: [],
+        children: []
     };
 
     if (actualName !== expectedName) {

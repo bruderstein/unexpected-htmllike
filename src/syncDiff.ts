@@ -5,9 +5,11 @@ import convertToDiff from './convertToDiff';
 import Weights from './Weights';
 import * as DiffCommon from './diffCommon';
 import RequiresAsyncError from './requiresAsyncError';
+import { Adapter, ChildContentDesc, DiffResult, ElementDesc, Expect, FullDiffResult } from "./types";
+import { Options } from "./diffCommon";
 
 
-function diffElements(actualAdapter, expectedAdapter, actual, expected, expect, options) {
+function diffElements<A, E>(actualAdapter: Adapter<A>, expectedAdapter: Adapter<E>, actual: A, expected: E, expect: Expect, options: Options): FullDiffResult<A> {
 
     options = ObjectAssign({}, DiffCommon.defaultOptions, options);
     options.weights = ObjectAssign({}, DiffCommon.DefaultWeights, options.weights);
@@ -15,9 +17,9 @@ function diffElements(actualAdapter, expectedAdapter, actual, expected, expect, 
         options.classAttributeName = actualAdapter.classAttributeName;
     }
 
-    var weights = new Weights();
-    var diffResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, weights, options);
-    var weightResults = weights.results()
+    const weights = new Weights();
+    const diffResult = diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, weights, options);
+    const weightResults = weights.results();
     return {
         diff: diffResult.diff,
         target: diffResult.target,
@@ -26,7 +28,7 @@ function diffElements(actualAdapter, expectedAdapter, actual, expected, expect, 
     };
 }
 
-function diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, expect, weights, options) {
+function diffElementOrWrapper<A, E>(actualAdapter: Adapter<A>, expectedAdapter: Adapter<E>, actual: A, expected: E, expect: Expect, weights: Weights, options: Options): DiffResult<A> {
 
     let diffWeights = new Weights();
     let diffResult = diffElement(actualAdapter, expectedAdapter, actual, expected, expect, diffWeights, options);
@@ -46,9 +48,9 @@ function diffElementOrWrapper(actualAdapter, expectedAdapter, actual, expected, 
 }
 
 
-function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, weights, options) {
+function diffElement<A, E>(actualAdapter: Adapter<A>, expectedAdapter: Adapter<E>, actual: A, expected: E, expect: Expect, weights: Weights, options: Options): DiffResult<A> {
 
-    let diffResult = {};
+    let diffResult: ChildContentDesc;
 
     const actualIsNative = isNativeType(actual);
     const expectedIsNative = isNativeType(expected);
@@ -58,16 +60,19 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, w
         try {
             expectItResult = expected(actual);
         } catch (e) {
-            diffResult.type = 'CONTENT';
-            diffResult.value = actual;
-            diffResult.diff = {
-                type: 'custom',
-                assertion: expected,
-                error: e
+            diffResult = {
+                type: 'CONTENT',
+                value: actual,
+                diff: {
+                    type: 'custom',
+                    assertion: expected,
+                    error: e
+                }
             };
             weights.add(options.weights.STRING_CONTENT_MISMATCH);
             return {
                 diff: diffResult,
+                weights: weights
             };
         }
 
@@ -76,39 +81,40 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, w
             throw new RequiresAsyncError();
         }
 
-        diffResult.type = 'CONTENT';
-        diffResult.value = actual;
-        ObjectAssign(diffResult, weights.results());
+        diffResult = {
+            type: 'CONTENT',
+            value: actual,
+        };
 
         return {
             diff: diffResult,
+            weights: weights
         };
     }
 
     if (actualIsNative && expectedIsNative) {
 
         diffResult = DiffCommon.getNativeContentResult(actual, expected, weights.createChild(), options);
-
-        ObjectAssign(diffResult, weights.results());
         return {
             diff: diffResult,
+            weights: weights
         };
     }
 
     if (actualIsNative && !expectedIsNative) {
         diffResult = DiffCommon.getNativeNonNativeResult(actual, expected, weights.createChild(), expectedAdapter, options);
 
-        ObjectAssign(diffResult, weights.results());
         return {
-            diff: diffResult
+            diff: diffResult,
+            weights: weights
         };
     }
 
     if (!actualIsNative && expectedIsNative) {
         diffResult = DiffCommon.getNonNativeNativeResult(actual, expected, weights.createChild(), actualAdapter, expectedAdapter, options);
-        ObjectAssign(diffResult, weights.results());
         return {
-            diff: diffResult
+            diff: diffResult,
+            weights: weights
         };
     }
 
@@ -116,7 +122,6 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, w
     const expectedName = expectedAdapter.getName(expected);
 
     diffResult = DiffCommon.getElementResult(actualName, expectedName, weights.createChild(), options);
-
 
     const attributesResult = DiffCommon.diffAttributes(actualAdapter.getAttributes(actual), expectedAdapter.getAttributes(expected), expect, weights.createChild(), options);
     if (typeof attributesResult.then === 'function') {
@@ -129,6 +134,7 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, w
     if (attributesResult.isTarget) {
         target = actual;
     }
+
     diffResult.attributes = attributesResult.diff;
     //weights.addWeight(attributesResult.weight);
 
@@ -150,7 +156,7 @@ function diffElement(actualAdapter, expectedAdapter, actual, expected, expect, w
 }
 
 
-function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, weights, options) {
+function diffContent<A, E>(actualAdapter: Adapter<A>, expectedAdapter: Adapter<E>, actual: A | Array<A>, expected: E | Array<E>, expect: Expect, weights: Weights, options: Options): ChildContentDesc<A> {
 
     let bestWeight = null;
     let bestDiff = null;
@@ -178,8 +184,8 @@ function diffContent(actualAdapter, expectedAdapter, actual, expected, expect, w
 
     let wrapperResult;
     if ((!bestWeight || bestWeight.real !== DiffCommon.WEIGHT_OK) &&
-        actual.length === 1 &&
-        expected.length !== 0 && !isNativeType(actual[0])) {
+        Array.isArray(actual) && actual.length === 1 &&
+        Array.isArray(expected) && expected.length !== 0 && !isNativeType(actual[0])) {
         // Try it as a wrapper, and see if it's better
         // Also covered here is a wrapper around several children
 

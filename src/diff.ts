@@ -1,11 +1,11 @@
-'use strict';
-import { DefaultWeights } from './diffCommon';
-import AsyncDiff from './asyncDiff';
-import SyncDiff from './syncDiff';
+import { DefaultWeights, Options } from './diffCommon';
+import * as AsyncDiff from './asyncDiff';
+import * as SyncDiff from './syncDiff';
 import RequiresAsyncError from './requiresAsyncError';
+import { Adapter, Expect } from "./types";
 
 
-function diffElements(actualAdapter, expectedAdapter, actual, expected, expect, options) {
+function diffElements<A,E>(actualAdapter: Adapter<A>, expectedAdapter: Adapter<E>, actual: A, expected: E, expect: Expect, options: Options) {
     
     try {
         return SyncDiff.diffElements(actualAdapter, expectedAdapter, actual, expected, expect, options);
