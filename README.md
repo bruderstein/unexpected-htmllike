@@ -309,8 +309,8 @@ for information on the parameters.
 * `found` - (boolean) - true if a match was found
 * `bestMatch` - (object) - if `found` is false, `bestMatch` contains the best located match, and is the same result as the `diff` function.
 That is to say that `bestMatch` has the following properties:
-** `weight` - (number) the weight of the diff - larger numbers indicate a bigger difference (see the description of `diff` above)
-** `diff` - the internal diff representation that you can pass to `render()` to output the actual output
+  * `weight` - (number) the weight of the diff - larger numbers indicate a bigger difference (see the description of `diff` above)
+  * `diff` - the internal diff representation that you can pass to `render()` to output the actual output
 * `bestMatchItem` - this is the element in whatever form the `actual` value takes that matched the best. This could be useful to identify the actual
 node that matched the best, and is provided only for convenience.
 
