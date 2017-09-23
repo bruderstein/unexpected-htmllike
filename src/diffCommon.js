@@ -197,6 +197,7 @@ export const diffAttributes = function (actualAttributes, expectedAttributes, ex
                 }
                 
             } else {
+                let originalErrorMode = expect.errorMode;
                 try {
                     expect.errorMode = 'bubble';
                     const attributesAssertion = options.attributesEqual ? 'to equal' : 'to satisfy';
@@ -206,6 +207,7 @@ export const diffAttributes = function (actualAttributes, expectedAttributes, ex
                 } catch (e) {
                     expectError = e;
                 }
+                expect.errorMode = originalErrorMode;
             }
 
             if (expectResult && typeof expectResult.isPending === 'function') {

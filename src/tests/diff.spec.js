@@ -9,7 +9,9 @@ const expect = Unexpected.clone()
 
 import {
     createActual,
-    createExpected
+    createExpected,
+    TestActualAdapter,
+    TestExpectedAdapter
 } from './mockEntities';
 
 
@@ -2357,6 +2359,34 @@ describe('diff', () => {
                 });
 
             });
+        });
+    });
+
+    describe('error modes', function () {
+        it('does not change the errorMode from default when diffing', function () {
+           expect.errorMode = 'default';
+           Diff.diffElements(
+               TestActualAdapter,
+               TestExpectedAdapter,
+               createActual({ name: 'SomeElement', attribs: { foo: 'bar' } }),
+               createExpected({ name: 'SomeElement', attribs: { foo: 'bar' } }),
+               expect,
+               {}
+           );
+           expect(expect.errorMode, 'to equal', 'default');
+        });
+
+        it('does not change the errorMode from bubble when diffing', function () {
+            expect.errorMode = 'bubble';
+            Diff.diffElements(
+                TestActualAdapter,
+                TestExpectedAdapter,
+                createActual({ name: 'SomeElement', attribs: { foo: 'bar' } }),
+                createExpected({ name: 'SomeElement', attribs: { foo: 'bar' } }),
+                expect,
+                {}
+            );
+            expect(expect.errorMode, 'to equal', 'bubble');
         });
     });
 });
