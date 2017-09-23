@@ -65,3 +65,5 @@ i.e. Caller need to check if they are a promise (existence of `result.then` is f
 ### v2.1.2
 * Fix a bug displaying the diff when the non-string content didn't match.
 
+### v2.1.3
+* Fix clobbering the errorMode when diffing
