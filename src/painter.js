@@ -145,13 +145,13 @@ export default function painter(pen, description, diffFn, inspect) {
                                 this.block(function () {
                                     this.text(actualString);
                                 }).sp().annotationBlock(function () {
-                                    this.error('mismatched type').sp().block(diffFn(typeof description.value, typeof description.diff.expectedValue).diff);
+                                    this.error('mismatched type').sp().block(diffFn(typeof description.value, typeof description.diff.expectedValue));
                                 });
                             } else if (typeof description.value === typeof description.diff.expectedValue) {
                                 this.block(actualString).sp().annotationBlock(function () { 
                                     const valueDiff = diffFn(description.value, description.diff.expectedValue);
                                     if (valueDiff) {
-                                        this.append(valueDiff.diff); 
+                                        this.append(valueDiff);
                                     } else {
                                         this.append(function () {
                                             this.error('should be').sp().text(description.diff.expectedValue).forceLineBreakBefore();
@@ -160,9 +160,9 @@ export default function painter(pen, description, diffFn, inspect) {
                                 });
                             } else {
                                 this.block(function () {
-                                    this.append(diffFn('' + description.value, '' + description.diff.expectedValue).diff);
+                                    this.append(diffFn('' + description.value, '' + description.diff.expectedValue));
                                 }).sp().annotationBlock(function () {
-                                    this.error('and mismatched type').sp().block(diffFn(typeof description.value, typeof description.diff.expectedValue).diff);
+                                    this.error('and mismatched type').sp().block(diffFn(typeof description.value, typeof description.diff.expectedValue));
                                 });
                             }
                         });
@@ -303,10 +303,10 @@ function outputAttribute(pen, name, value, diff, inspect, diffFn) {
                             const valueDiff = diffFn(value, diff.expectedValue);
 
                             if (valueDiff && valueDiff.inline) {
-                                pen.nl().block(valueDiff.diff);
+                                pen.nl().block(valueDiff);
                             } else if (valueDiff) {
                                 pen.nl().block(function () {
-                                    this.append(valueDiff.diff);
+                                    this.append(valueDiff);
                                 });
                             } else {
                                 pen.nl().block(function () {
