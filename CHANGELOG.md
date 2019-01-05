@@ -67,3 +67,6 @@ i.e. Caller need to check if they are a promise (existence of `result.then` is f
 
 ### v2.1.3
 * Fix clobbering the errorMode when diffing
+
+### v2.2.0
+* Stop relying on old unexpectedType.diff output format
